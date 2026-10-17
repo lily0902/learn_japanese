@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Icon } from '../components/Icon';
 import { Jp, renderRich } from '../components/Jp';
-import { cx, shuffle, useKey } from '../components/Misc';
+import { cx, useKey } from '../components/Misc';
 import type { Question } from '../data/types';
 import { matchAnswer, romaToKana } from '../lib/kana';
+import { shuffle } from '../lib/random';
 import { kana } from '../lib/ruby';
 import { speak, speechSupported, useJapaneseVoices } from '../lib/speech';
 
@@ -46,7 +47,7 @@ function Options({ options, jp, onPick, picked }: {
     if (n >= 1 && n <= order.length) onPick(order[n - 1]);
   }, picked === null);
   return (
-    <div className="opts">
+    <div className={cx('opts', !jp && 'zh')}>
       {order.map((k, n) => (
         <button
           key={k}
@@ -74,10 +75,10 @@ export function ChoiceQuestion({ q, onAnswer, nextButton }: QuestionProps<'c'>) 
     <>
       <span className="q-type"><Icon name="list" className="ic-sm" />選擇題</span>
       {q.zh && <p className="q-zh">{q.zh}</p>}
-      <Jp as="p" className="q-jp" text={q.q} fill={picked !== null ? renderRich(q.o[0]) : undefined} />
-      <Options options={q.o} jp picked={picked} onPick={pick} />
+      <Jp as="p" className="q-jp" text={q.q} ja={!q.qz} fill={picked !== null ? renderRich(q.o[0]) : undefined} />
+      <Options options={q.o} jp={!q.oz} picked={picked} onPick={pick} />
       {picked !== null && (
-        <Feedback ok={picked === 0} explain={q.e} answer={picked !== 0 ? <Jp text={q.o[0]} /> : undefined} />
+        <Feedback ok={picked === 0} explain={q.e} answer={picked !== 0 ? (q.oz ? q.o[0] : <Jp text={q.o[0]} />) : undefined} />
       )}
       <div className="q-actions">{picked !== null && nextButton}</div>
     </>

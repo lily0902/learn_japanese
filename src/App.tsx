@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import Home from './pages/Home';
 import Toc from './pages/Toc';
 import UnitPage from './pages/UnitPage';
+import ExamPage from './pages/ExamPage';
 import Review from './pages/Review';
 import IndexPage from './pages/IndexPage';
 import Settings from './pages/Settings';
@@ -18,6 +19,7 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="toc" element={<Toc />} />
           <Route path="unit/:id/:step?" element={<UnitPage />} />
+          <Route path="exam/:id" element={<ExamPage />} />
           <Route path="review/:mode?" element={<Review />} />
           <Route path="index/:tab?" element={<IndexPage />} />
           <Route path="settings" element={<Settings />} />

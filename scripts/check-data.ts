@@ -3,17 +3,22 @@
  * - 振假名標記格式、讀音只能是假名
  * - 題目答案、選項、會話角色是否完整
  * - 羅馬拼音轉換、答案比對、同步合併
+ * - 綜合測驗：每份都抽得出完整題數、單字題的選項與答案合理
  */
-import { UNITS } from '../src/data';
+import { EXAMS, UNITS, WORDS } from '../src/data';
 import type { Unit } from '../src/data/types';
 import { matchAnswer, normalize, romaToKana } from '../src/lib/kana';
 import { KANJI_CLASS, kana, plain, rubyRe } from '../src/lib/ruby';
 import { newCard } from '../src/lib/srs';
-import { emptyState, mergeStates } from '../src/state/merge';
+import { drawExam, examTotal, grammarPool, GRAMMAR_PER_UNIT, VOCAB_PER_UNIT } from '../src/quiz/exam';
+import { emptyState, mergeStates, normalizeState } from '../src/state/merge';
 
 const errors: string[] = [];
 const warnings: string[] = [];
-const err = (where: string, msg: string) => errors.push(`✗ ${where}: ${msg}`);
+const err = (where: string, msg: string) => {
+  const line = `✗ ${where}: ${msg}`;
+  if (!errors.includes(line)) errors.push(line);
+};
 
 const KANJI = new RegExp(KANJI_CLASS);
 const KANA_ONLY = /^[぀-ゟ゠-ヿー]+$/;
@@ -120,6 +125,42 @@ for (const u of UNITS) {
   }
 }
 
+// ---- 綜合測驗 ----
+if (EXAMS.length !== 6) err('綜合測驗', `應該有 6 份，現在是 ${EXAMS.length} 份`);
+for (const exam of EXAMS) {
+  const where = `綜合測驗 ${exam.id}`;
+  for (const u of exam.units) {
+    if (grammarPool(u).length < GRAMMAR_PER_UNIT) err(where, `第${u.id}課的文法題不夠 ${GRAMMAR_PER_UNIT} 題`);
+    if (u.vocab.length < VOCAB_PER_UNIT) err(where, `第${u.id}課的單字不夠 ${VOCAB_PER_UNIT} 個`);
+  }
+  // 隨機抽很多次，涵蓋各種題型組合
+  for (let round = 0; round < 200; round++) {
+    const qs = drawExam(exam);
+    if (qs.length !== examTotal(exam)) err(where, `抽出 ${qs.length} 題，應為 ${examTotal(exam)} 題`);
+    if (new Set(qs.map((q) => q.id)).size !== qs.length) err(where, '同一次抽到重複的題目');
+    for (const u of exam.units) {
+      const mine = qs.filter((q) => q.unitId === u.id);
+      if (mine.filter((q) => !q.word).length !== GRAMMAR_PER_UNIT || mine.filter((q) => q.word).length !== VOCAB_PER_UNIT) {
+        err(where, `第${u.id}課的題數分配不對`);
+      }
+    }
+    for (const q of qs) {
+      const at = `${where} ${q.id}`;
+      if (q.word && !WORDS.has(q.word)) err(at, '單字題對應不到單字卡');
+      if (q.word && (q.t === 'c' || q.t === 'l')) {
+        if (q.o.length !== 4) err(at, `單字題選項只有 ${q.o.length} 個`);
+        if (new Set(q.o).size !== q.o.length) err(at, `單字題選項重複：${q.o.join('／')}`);
+      }
+      if (q.t === 'i') {
+        q.a.forEach((a) => {
+          if (!/^[぀-ゟー]+$/.test(normalize(kana(a)))) err(at, `打字題答案無法用假名輸入：${a}`);
+          if (!matchAnswer(kana(a), q.a) || !matchAnswer(plain(a), q.a)) err(at, `打字題答案自我比對失敗：${a}`);
+        });
+      }
+    }
+  }
+}
+
 // ---- 羅馬拼音 ----
 const romaCases: [string, string][] = [
   ['konnichiha', 'こんにちは'], ['kitte', 'きって'], ['desu', 'です'], ['matte', 'まって'],
@@ -158,6 +199,23 @@ if (!matchAnswer('待って', ['待[ま]って'])) err('答案比對', '漢字�
   const again = mergeStates(m, a);
   if (JSON.stringify(again.units) !== JSON.stringify(m.units)) err('合併', '重複合併結果應該一致');
 }
+{
+  const a = emptyState();
+  const b = emptyState();
+  a.exams['1'] = { best: 20, total: 30, skipped: 500 };
+  b.exams['1'] = { best: 26, total: 30, passed: '2026-10-02' };
+  a.exams['2'] = { best: 25, total: 30, passed: '2026-10-05' };
+  b.exams['2'] = { best: 28, total: 30, passed: '2026-10-09' };
+  a.days['2026-10-02'] = { rev: 1 };
+  b.days['2026-10-02'] = { exam: 2 };
+  const m = mergeStates(a, b);
+  if (m.exams['1'].best !== 26 || m.exams['1'].passed !== '2026-10-02') err('合併', '測驗分數應取高的、合格日期要保留');
+  if (m.exams['1'].skipped !== 500) err('合併', '任一邊按過跳過就算跳過');
+  if (m.exams['2'].best !== 28 || m.exams['2'].passed !== '2026-10-05') err('合併', '測驗合格日期應取最早');
+  if (m.days['2026-10-02'].rev !== 1 || m.days['2026-10-02'].exam !== 2) err('合併', '每日紀錄的複習與測驗都要保留');
+  if (JSON.stringify(mergeStates(m, b).exams) !== JSON.stringify(m.exams)) err('合併', '測驗重複合併結果應該一致');
+  if (!normalizeState({ units: {} }).exams) err('合併', '舊資料沒有 exams 也要能讀');
+}
 
 // ---- 報告 ----
 const stats = {
@@ -166,6 +224,7 @@ const stats = {
   文法: UNITS.reduce((n, u) => n + u.grammar.length, 0),
   例句: UNITS.reduce((n, u) => n + u.grammar.reduce((k, g) => k + g.ex.length, 0), 0),
   練習題: UNITS.reduce((n, u) => n + u.practice.length, 0),
+  綜合測驗: EXAMS.length,
   會話台詞: UNITS.reduce((n, u) => n + u.dialogue.lines.length, 0),
 };
 console.log('內容統計', stats);

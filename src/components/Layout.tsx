@@ -10,7 +10,7 @@ import { ToastHost } from './Toast';
 
 const NAV: { to: string; label: string; icon: IconName; match?: RegExp }[] = [
   { to: '/', label: '今日', icon: 'sun', match: /^\/$/ },
-  { to: '/toc', label: '目錄', icon: 'book', match: /^\/(toc|unit)/ },
+  { to: '/toc', label: '目錄', icon: 'book', match: /^\/(toc|unit|exam)/ },
   { to: '/review', label: '複習', icon: 'layers', match: /^\/review/ },
   { to: '/index', label: '索引', icon: 'search', match: /^\/index/ },
   { to: '/settings', label: '設定', icon: 'sliders', match: /^\/settings/ },

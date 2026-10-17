@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
-import { CoverToggle, cx, shuffle, useKey, wait, Zh } from '../components/Misc';
+import { CoverToggle, cx, useKey, wait, Zh } from '../components/Misc';
 import { SpeakButton } from '../components/SpeakButton';
 import type { Choice, Line } from '../data/types';
+import { shuffle } from '../lib/random';
 import { speak, speechSupported } from '../lib/speech';
 import type { StepProps } from '../pages/UnitPage';
 import { getState, useAppState } from '../state/store';

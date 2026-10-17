@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Jp, renderRich } from '../components/Jp';
-import { CoverToggle, cx, shuffle, Zh } from '../components/Misc';
+import { CoverToggle, cx, Zh } from '../components/Misc';
 import { SpeakButton } from '../components/SpeakButton';
 import type { GrammarPoint } from '../data/types';
+import { shuffle } from '../lib/random';
 import type { StepProps } from '../pages/UnitPage';
 import { useAppState } from '../state/store';
 

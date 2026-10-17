@@ -40,8 +40,8 @@ export interface Dialogue {
 }
 
 export type Question =
-  /** 選擇題 */
-  | { t: 'c'; q: string; zh?: string; o: string[]; e?: string }
+  /** 選擇題（qz：題目是中文夾雜日文；oz：選項是中文。兩者都是程式自動轉出來的題目用的） */
+  | { t: 'c'; q: string; zh?: string; o: string[]; e?: string; qz?: boolean; oz?: boolean }
   /** 聽力題：選中文意思 */
   | { t: 'l'; say: string; o: string[]; e?: string }
   /** 句子重組：w 是正確順序，alt 是其他也正確的順序 */
@@ -61,4 +61,11 @@ export interface Unit {
   practice: Question[];
 }
 
-export type QuestionWithId = Question & { id: string; unitId: number };
+/** word：自動產生的單字題對應的單字卡 key */
+export type QuestionWithId = Question & { id: string; unitId: number; word?: string };
+
+/** 綜合測驗：每 5 課一份 */
+export interface Exam {
+  id: number;
+  units: Unit[];
+}

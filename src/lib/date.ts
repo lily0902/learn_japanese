@@ -15,6 +15,9 @@ export function weekday(s: string): number {
   return new Date(y, m - 1, d).getDay();
 }
 
+/** 2026-10-17 → 10 月 17 日 */
+export const formatMonthDay = (s: string) => `${Number(s.slice(5, 7))} 月 ${Number(s.slice(8, 10))} 日`;
+
 export function formatLong(d = new Date()): string {
   const w = '日一二三四五六'[d.getDay()];
   return `${d.getMonth() + 1} 月 ${d.getDate()} 日（${w}）`;

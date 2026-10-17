@@ -22,7 +22,16 @@ export interface UnitProgress {
 /** 錯題：答對時不刪除而是標記 cleared，才能在兩台裝置之間正確合併 */
 export interface WrongEntry { n: number; t: number; cleared?: boolean }
 
-export interface DayLog { rev?: number }
+/** 綜合測驗：best 是最佳答對題數，passed 是第一次合格的日期，skipped 是按下「跳過」的時間 */
+export interface ExamProgress {
+  best?: number;
+  total?: number;
+  passed?: string;
+  skipped?: number;
+}
+
+/** rev：當天複習完單字卡的次數；exam：當天考完綜合測驗的次數 */
+export interface DayLog { rev?: number; exam?: number }
 
 export type Theme = 'auto' | 'light' | 'dark';
 
@@ -40,6 +49,7 @@ export interface AppState {
   units: Record<string, UnitProgress>;
   srs: Record<string, Card>;
   wrong: Record<string, WrongEntry>;
+  exams: Record<string, ExamProgress>;
   days: Record<string, DayLog>;
   settings: Settings;
 }

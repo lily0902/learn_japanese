@@ -2,6 +2,7 @@ import { wordKey } from '../data';
 import type { Unit } from '../data/types';
 import { today } from '../lib/date';
 import { gradeCard, newCard, type Card, type Grade } from '../lib/srs';
+import { passMark } from '../quiz/exam';
 import { emptyState, normalizeState } from './merge';
 import { getState, setState, update } from './store';
 import { STEPS, type AppState, type Settings, type StepKey } from './types';
@@ -57,6 +58,35 @@ export function recordAnswer(questionId: string, ok: boolean) {
     } else {
       s.wrong[questionId] = { n: (prev?.n ?? 0) + 1, t: Date.now() };
     }
+  });
+}
+
+/** 單字題答錯：把這張單字卡排回今天（不扣難易係數）。還沒學過的單字不處理 */
+export function resurfaceWord(key: string) {
+  update((s) => {
+    const c = s.srs[key];
+    if (c && c.due > today()) s.srs[key] = { ...c, due: today(), t: Date.now() };
+  });
+}
+
+/** 考完一份綜合測驗（不論分數）。回傳之前的最佳成績 */
+export function finishExam(examId: number, score: number, total: number): number | undefined {
+  let prevBest: number | undefined;
+  update((s) => {
+    const p = (s.exams[examId] ??= {});
+    prevBest = p.best;
+    if (p.best === undefined || score > p.best) { p.best = score; p.total = total; }
+    if (!p.passed && score >= passMark(total)) p.passed = today();
+    const d = (s.days[today()] ??= {});
+    d.exam = (d.exam ?? 0) + 1;
+  });
+  return prevBest;
+}
+
+/** 今日任務的「跳過，直接學下一課」 */
+export function skipExam(examId: number) {
+  update((s) => {
+    (s.exams[examId] ??= {}).skipped ??= Date.now();
   });
 }
 

@@ -8,7 +8,9 @@ import { ChoiceQuestion, InputQuestion, ListenQuestion, OrderQuestion } from './
 interface QuizProps {
   questions: QuestionWithId[];
   /** 第一輪做完時呼叫（「只練錯的」不會再呼叫） */
-  onFinish?: (score: number, total: number) => void;
+  onFinish?: (score: number, total: number, wrongs: QuestionWithId[]) => void;
+  /** 每答一題要記錄什麼（預設：答錯進錯題本、答對移出） */
+  record?: (q: QuestionWithId, ok: boolean) => void;
   /** 結果頁下方的按鈕 */
   footer?: ReactNode;
   /** 顯示題目出自第幾課（錯題本用） */
@@ -23,7 +25,9 @@ function resultCopy(score: number, total: number) {
   return { stamp: <>もう<br />すこし</>, msg: '沒關係，回去看看文法說明，再挑戰一次吧！' };
 }
 
-export function Quiz({ questions, onFinish, footer, showUnit }: QuizProps) {
+const recordWrong = (q: QuestionWithId, ok: boolean) => recordAnswer(q.id, ok);
+
+export function Quiz({ questions, onFinish, footer, showUnit, record = recordWrong }: QuizProps) {
   const [round, setRound] = useState({ list: questions, n: 0, retry: false });
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -41,7 +45,7 @@ export function Quiz({ questions, onFinish, footer, showUnit }: QuizProps) {
 
   const onAnswer = (ok: boolean) => {
     setAnswered(true);
-    recordAnswer(q.id, ok);
+    record(q, ok);
     if (ok) setScore((s) => s + 1);
     else setWrongs((w) => [...w, q]);
   };
@@ -51,7 +55,7 @@ export function Quiz({ questions, onFinish, footer, showUnit }: QuizProps) {
       setIdx(idx + 1);
       setAnswered(false);
     } else {
-      if (!round.retry) onFinish?.(score, list.length);
+      if (!round.retry) onFinish?.(score, list.length, wrongs);
       setFinished(true);
     }
   };

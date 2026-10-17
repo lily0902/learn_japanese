@@ -2,10 +2,12 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
-import { UNITS } from '../data';
+import { examRange, UNITS } from '../data';
 import { addDays, formatLong, today, weekday } from '../lib/date';
+import { examMinutes, examTotal } from '../quiz/exam';
+import { skipExam } from '../state/actions';
 import {
-  activeDays, dueKeys, isUnitDone, learnedCount, nextUnit, stepsDone, streak, unitsDoneOn, wrongIds,
+  activeDays, dueKeys, isUnitDone, learnedCount, nextUnit, pendingExam, stepsDone, streak, unitsDoneOn, wrongIds,
 } from '../state/selectors';
 import { useAppState } from '../state/store';
 
@@ -62,6 +64,7 @@ function StampCalendar({ days }: { days: Set<string> }) {
 export default function Home() {
   const s = useAppState();
   const nu = nextUnit(s);
+  const exam = pendingExam(s);
   const due = dueKeys(s).length;
   const learned = learnedCount(s);
   const wrongN = wrongIds(s).length;
@@ -74,9 +77,31 @@ export default function Home() {
     return { lv, done: list.filter((u) => isUnitDone(s, u.id)).length, total: list.length };
   });
 
+  // 5 課都完成後，先推薦綜合測驗；可以跳過直接學下一課
+  const examSub = exam && (
+    <>
+      {examTotal(exam)} 題・約 {examMinutes(exam)} 分鐘・80% 合格
+      <br />
+      <button type="button" className="link-btn" onClick={() => skipExam(exam.id)}>
+        {nu ? `跳過，直接學第 ${nu.id} 課` : '先跳過'}
+      </button>
+    </>
+  );
+  const examAction = exam && (
+    <Link className="btn primary" to={`/exam/${exam.id}`}>開始測驗<Icon name="arrowRight" /></Link>
+  );
+
   let task1: ReactNode;
-  if (!nu && doneToday.length === 0) {
-    task1 = <Task n={1} done title="30 課全部完成了！" sub="おめでとう！接下來用單字卡和錯題本維持記憶。" />;
+  if (doneToday.length > 0 && exam) {
+    task1 = (
+      <Task
+        n={1}
+        done
+        title={`今天完成了第 ${doneToday.map((u) => u.id).join('、')} 課`}
+        sub={<>下一步：{examRange(exam)}綜合測驗・{examSub}</>}
+        action={examAction}
+      />
+    );
   } else if (doneToday.length > 0) {
     task1 = (
       <Task
@@ -87,6 +112,8 @@ export default function Home() {
         action={nu && <Link className="btn small" to={`/unit/${nu.id}`}>繼續下一課</Link>}
       />
     );
+  } else if (exam) {
+    task1 = <Task n={1} title={`${examRange(exam)}綜合測驗`} sub={examSub} action={examAction} />;
   } else if (nu) {
     const steps = stepsDone(s, nu.id);
     task1 = (
@@ -97,6 +124,8 @@ export default function Home() {
         action={<Link className="btn primary" to={`/unit/${nu.id}`}>{steps ? '繼續學習' : '開始學習'}<Icon name="arrowRight" /></Link>}
       />
     );
+  } else {
+    task1 = <Task n={1} done title="30 課全部完成了！" sub="おめでとう！接下來用單字卡和錯題本維持記憶。" />;
   }
 
   let task2: ReactNode;
@@ -156,7 +185,7 @@ export default function Home() {
 
       <section className="card">
         <h2>學習印章</h2>
-        <p className="card-sub" style={{ marginBottom: 12 }}>完成一課、或把到期的單字卡複習完，當天就會蓋上印章。</p>
+        <p className="card-sub" style={{ marginBottom: 12 }}>完成一課、把到期的單字卡複習完，或考完一份綜合測驗，當天就會蓋上印章。</p>
         <StampCalendar days={activeDays(s)} />
       </section>
 

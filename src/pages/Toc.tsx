@@ -1,10 +1,12 @@
+import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Jp } from '../components/Jp';
 import { Hanko } from '../components/Misc';
-import { UNITS } from '../data';
-import type { Unit } from '../data/types';
+import { EXAMS, examRange, UNITS } from '../data';
+import type { Exam, Unit } from '../data/types';
 import { plain } from '../lib/ruby';
-import { isUnitDone, nextUnit, unitProgress } from '../state/selectors';
+import { examMinutes, examTotal } from '../quiz/exam';
+import { examProgress, isUnitDone, nextUnit, unitProgress } from '../state/selectors';
 import { useAppState } from '../state/store';
 import { STEPS, type AppState } from '../state/types';
 
@@ -45,13 +47,38 @@ function TocItem({ unit, s, isNext }: { unit: Unit; s: AppState; isNext: boolean
   );
 }
 
+function TocExam({ exam, s }: { exam: Exam; s: AppState }) {
+  const p = examProgress(s, exam.id);
+  return (
+    <li>
+      <Link className="toc-item toc-exam" to={`/exam/${exam.id}`}>
+        <span className="toc-no"><span className="exam-tag">測驗</span></span>
+        <span className="toc-title">
+          <span className="exam-name">綜合測驗 {exam.id}<span lang="ja">まとめテスト</span></span>
+          <span className="zh">{examRange(exam)}・{examTotal(exam)} 題・約 {examMinutes(exam)} 分鐘</span>
+        </span>
+        <span className="toc-status">
+          {p.passed ? (
+            <Hanko size="sm" label="已合格">合格</Hanko>
+          ) : p.best !== undefined && (
+            <span className="exam-best">最佳 {p.best}/{p.total}</span>
+          )}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+/** 每份測驗接在它最後一課的後面 */
+const examAfter = (unitId: number) => EXAMS.find((e) => e.units[e.units.length - 1].id === unitId);
+
 export default function Toc() {
   const s = useAppState();
   const nu = nextUnit(s);
   return (
     <>
       <h1 className="page-title">目錄</h1>
-      <p className="page-sub">共 {UNITS.length} 課。建議依順序每天學一課，也可以自由跳著看。</p>
+      <p className="page-sub">共 {UNITS.length} 課，每 5 課有一份綜合測驗。建議依順序每天學一課，也可以自由跳著看。</p>
       {PARTS.map(({ level, part, name }) => {
         const list = UNITS.filter((u) => u.level === level);
         const doneN = list.filter((u) => isUnitDone(s, u.id)).length;
@@ -63,7 +90,15 @@ export default function Toc() {
               <span className="part-count">{doneN} / {list.length}</span>
             </h2>
             <ol className="toc">
-              {list.map((u) => <TocItem key={u.id} unit={u} s={s} isNext={nu?.id === u.id} />)}
+              {list.map((u) => {
+                const exam = examAfter(u.id);
+                return (
+                  <Fragment key={u.id}>
+                    <TocItem unit={u} s={s} isNext={nu?.id === u.id} />
+                    {exam && <TocExam exam={exam} s={s} />}
+                  </Fragment>
+                );
+              })}
             </ol>
           </section>
         );
