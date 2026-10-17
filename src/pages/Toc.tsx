@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Jp } from '../components/Jp';
 import { Hanko } from '../components/Misc';
-import { EXAMS, examRange, UNITS } from '../data';
+import { EXAMS, examRange, LESSONS, PREP } from '../data';
 import type { Exam, Unit } from '../data/types';
 import { plain } from '../lib/ruby';
 import { examMinutes, examTotal } from '../quiz/exam';
@@ -11,9 +11,10 @@ import { useAppState } from '../state/store';
 import { STEPS, type AppState } from '../state/types';
 
 const PARTS = [
-  { level: 'N5', part: '第一部', name: 'N5 基礎' },
-  { level: 'N4', part: '第二部', name: 'N4 進階' },
-] as const;
+  { key: 'prep', part: '開始之前', name: '預備課', list: PREP },
+  { key: 'N5', part: '第一部', name: 'N5 基礎', list: LESSONS.filter((u) => u.level === 'N5') },
+  { key: 'N4', part: '第二部', name: 'N4 進階', list: LESSONS.filter((u) => u.level === 'N4') },
+];
 
 function TocItem({ unit, s, isNext }: { unit: Unit; s: AppState; isNext: boolean }) {
   const p = unitProgress(s, unit.id);
@@ -22,7 +23,11 @@ function TocItem({ unit, s, isNext }: { unit: Unit; s: AppState; isNext: boolean
   return (
     <li>
       <Link className="toc-item" to={`/unit/${unit.id}`}>
-        <span className="toc-no"><small>第</small><b>{unit.id}</b><small>課</small></span>
+        {unit.prep ? (
+          <span className="toc-no"><small>預備</small><b>{unit.prep}</b></span>
+        ) : (
+          <span className="toc-no"><small>第</small><b>{unit.id}</b><small>課</small></span>
+        )}
         <span className="toc-title">
           <Jp text={unit.title} className="jp" />
           <span className="zh">{unit.zh}</span>
@@ -78,12 +83,13 @@ export default function Toc() {
   return (
     <>
       <h1 className="page-title">目錄</h1>
-      <p className="page-sub">共 {UNITS.length} 課，每 5 課有一份綜合測驗。建議依順序每天學一課，也可以自由跳著看。</p>
-      {PARTS.map(({ level, part, name }) => {
-        const list = UNITS.filter((u) => u.level === level);
+      <p className="page-sub">
+        共 {LESSONS.length} 課＋{PREP.length} 堂預備課，每 5 課有一份綜合測驗。建議依順序每天學一課，也可以自由跳著看。
+      </p>
+      {PARTS.map(({ key, part, name, list }) => {
         const doneN = list.filter((u) => isUnitDone(s, u.id)).length;
         return (
-          <section className="toc-part" key={level}>
+          <section className="toc-part" key={key}>
             <h2>
               <span className="part">{part}</span>
               {name}

@@ -3,7 +3,7 @@ import { Icon } from '../components/Icon';
 import { Jp, renderRich } from '../components/Jp';
 import { cx, useKey } from '../components/Misc';
 import type { Question } from '../data/types';
-import { matchAnswer, romaToKana } from '../lib/kana';
+import { matchAnswer, matchDigits, romaToKana } from '../lib/kana';
 import { shuffle } from '../lib/random';
 import { kana } from '../lib/ruby';
 import { speak, speechSupported, useJapaneseVoices } from '../lib/speech';
@@ -204,28 +204,45 @@ export function OrderQuestion({ q, onAnswer, nextButton }: QuestionProps<'o'>) {
 }
 
 /* ---------- 打字題 ---------- */
+/** 數字題的輸入提示：依答案的格式（3600、9:30、10/17） */
+const numberPlaceholder = (a: string) => (a.includes(':') ? '例：9:30' : a.includes('/') ? '例：10/17' : '輸入數字…');
+
 export function InputQuestion({ q, onAnswer, nextButton }: QuestionProps<'i'>) {
   const [value, setValue] = useState('');
   const [result, setResult] = useState<boolean | null>(null);
   const [hint, setHint] = useState(false);
   const [empty, setEmpty] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus({ preventScroll: true }); }, []);
+
+  const play = async () => {
+    if (!q.say) return;
+    setPlaying(true);
+    await speak(q.say);
+    setPlaying(false);
+  };
+  useEffect(() => {
+    if (!q.say) return;
+    const t = window.setTimeout(() => void play(), 350);
+    return () => window.clearTimeout(t);
+    // 只在題目出現時自動播放一次
+  }, [q]);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     const el = e.target;
     setEmpty(false);
     const composing = (e.nativeEvent as InputEvent).isComposing;
-    // 游標在最後面時才自動轉換，避免在中間修改時跳動
-    if (!composing && el.selectionStart === el.value.length) setValue(romaToKana(el.value));
+    // 游標在最後面時才自動轉換，避免在中間修改時跳動；數字題不轉
+    if (!q.num && !composing && el.selectionStart === el.value.length) setValue(romaToKana(el.value));
     else setValue(el.value);
   };
 
   const check = () => {
     if (result !== null) return;
     if (!value.trim()) { setEmpty(true); inputRef.current?.focus(); return; }
-    const ok = matchAnswer(value, q.a);
+    const ok = q.num ? matchDigits(value, q.a) : matchAnswer(value, q.a);
     setResult(ok);
     onAnswer(ok);
   };
@@ -238,16 +255,27 @@ export function InputQuestion({ q, onAnswer, nextButton }: QuestionProps<'i'>) {
   };
 
   const first = kana(q.a[0]);
+  const answers = q.num ? q.a.slice(0, 1) : q.a;
 
   return (
     <>
-      <span className="q-type"><Icon name="keyboard" className="ic-sm" />打字題</span>
+      <span className="q-type">
+        <Icon name={q.say ? 'headphones' : 'keyboard'} className="ic-sm" />{q.say ? '聽寫題' : '打字題'}
+      </span>
       <p className="q-zh">{q.zh}</p>
+      {q.say && (
+        <div className="listen-play">
+          <button type="button" className={cx('big-play', playing && 'speaking')} onClick={() => void play()} aria-label="播放題目">
+            <Icon name="volume" />
+          </button>
+          <span className="hint">可以重複播放</span>
+        </div>
+      )}
       <Jp
         as="p"
         className="q-jp"
         text={q.q}
-        fill={result !== null ? renderRich(result ? romaToKana(value, true) : q.a[0]) : undefined}
+        fill={result !== null ? renderRich(result ? (q.num ? value.trim() : romaToKana(value, true)) : q.a[0]) : undefined}
       />
       <div className="input-wrap">
         <label htmlFor="answer-input">在（　）裡填入答案</label>
@@ -255,7 +283,8 @@ export function InputQuestion({ q, onAnswer, nextButton }: QuestionProps<'i'>) {
           id="answer-input"
           ref={inputRef}
           className={cx('ja-input', result === true && 'correct', result === false && 'wrong')}
-          lang="ja"
+          lang={q.num ? undefined : 'ja'}
+          inputMode={q.num && /^\d+$/.test(q.a[0]) ? 'numeric' : undefined}
           value={value}
           onChange={onChange}
           onKeyDown={onKeyDown}
@@ -265,24 +294,30 @@ export function InputQuestion({ q, onAnswer, nextButton }: QuestionProps<'i'>) {
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint="done"
-          placeholder="在這裡輸入…"
+          placeholder={q.num ? numberPlaceholder(q.a[0]) : '在這裡輸入…'}
           aria-describedby="answer-help"
           aria-invalid={empty || undefined}
         />
         <p className="input-help" id="answer-help">
           {empty
             ? '請先輸入答案喔。'
-            : '可以直接打羅馬拼音，會自動轉成平假名（nn → ん、xtu → っ、- → ー），也可以用日文輸入法。'}
+            : q.num
+              ? '用阿拉伯數字回答，半形、全形都可以。'
+              : '可以直接打羅馬拼音，會自動轉成平假名（nn → ん、xtu → っ、- → ー），也可以用日文輸入法。'}
         </p>
         {hint && result === null && (
-          <p className="input-hint">提示：答案是「{first[0]}」開頭，共 {first.length} 個假名。</p>
+          q.say ? (
+            <p className="input-hint">提示：聽到的是「<Jp text={q.say} />」。</p>
+          ) : (
+            <p className="input-hint">提示：答案是「{first[0]}」開頭，共 {first.length} 個假名。</p>
+          )
         )}
       </div>
       {result !== null && (
         <Feedback
           ok={result}
           explain={q.e}
-          answer={!result ? q.a.map((a, i) => <span key={a}>{i > 0 && '／'}<Jp text={a} /></span>) : undefined}
+          answer={!result ? answers.map((a, i) => <span key={a}>{i > 0 && '／'}<Jp text={a} /></span>) : undefined}
         />
       )}
       <div className="q-actions">

@@ -851,3 +851,52 @@ button.fc:focus-visible { outline-offset: 4px; }
   color: var(--ai); font: inherit; font-weight: 500; text-decoration: underline; text-underline-offset: 3px;
 }
 .link-btn:hover { color: var(--ink); }
+
+/* ---------- 數字練習 ---------- */
+.drill-preview {
+  display: flex; flex-wrap: wrap; gap: 2px 18px; margin-bottom: 6px;
+  font-family: var(--font-ja); font-size: 22px; font-weight: 600; line-height: 1.6; font-variant-numeric: tabular-nums;
+}
+.drill-preview span { white-space: nowrap; }
+.drill-setup h2 { font-size: 17px; margin-bottom: 10px; }
+.drill-setup h2 ~ h2 { margin-top: 26px; }
+.drill-kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.drill-dirs { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+.drill-kind, .drill-dir {
+  position: relative; text-align: left; color: var(--ink); cursor: pointer; touch-action: manipulation;
+  border-radius: 12px; border: 1.5px solid var(--line-strong); background: var(--surface);
+  transition: border-color var(--dur-fast), background-color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+}
+.drill-kind:hover, .drill-dir:hover { border-color: var(--ink-3); }
+.drill-kind:active, .drill-dir:active { transform: scale(.98); }
+.drill-kind[aria-pressed="true"], .drill-dir[aria-pressed="true"] { border-color: var(--shu); background: var(--shu-soft); }
+.drill-kind { display: grid; gap: 2px; justify-items: start; align-content: center; min-height: 78px; padding: 10px 34px 10px 14px; }
+.drill-sample { font-family: var(--font-ja); font-size: 20px; font-weight: 600; line-height: 1.5; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.drill-label { font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.drill-dir { display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 10px 34px 10px 16px; }
+.drill-dir-ic { flex: none; width: 24px; height: 24px; color: var(--ai); }
+.drill-dir b { display: block; font-size: 16px; }
+.drill-dir small { display: block; font-size: 13px; color: var(--ink-2); }
+.drill-kind[aria-pressed="true"] .drill-label,
+.drill-dir[aria-pressed="true"] .drill-dir-ic { color: var(--shu); }
+.drill-check { position: absolute; top: 10px; right: 10px; color: var(--shu); }
+.drill-start { margin-top: 26px; }
+.crumb-btn {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0;
+  color: var(--ink-2); text-decoration: none; font-weight: 400;
+}
+.crumb-btn:hover { color: var(--ink); text-decoration: underline; }
+
+/* ---------- 主題單字 ---------- */
+.topic-grid { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.topic-tile {
+  display: grid; gap: 2px; height: 100%; padding: 14px 16px; text-decoration: none; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-1);
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+}
+.topic-tile:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.topic-name { font-family: var(--font-head); font-size: 19px; font-weight: 700; }
+.topic-sample { font-family: var(--font-ja); font-size: 16px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topic-count { font-size: 12px; color: var(--ink-3); }
+.v-unit { color: var(--ai); font-weight: 700; text-decoration: none; }
+.v-unit:hover { text-decoration: underline; text-underline-offset: 3px; }

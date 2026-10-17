@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Icon } from '../components/Icon';
 import { Hanko } from '../components/Misc';
+import { getUnit, unitLabel } from '../data';
 import type { QuestionWithId } from '../data/types';
 import { recordAnswer } from '../state/actions';
 import { ChoiceQuestion, InputQuestion, ListenQuestion, OrderQuestion } from './questions';
@@ -104,7 +105,7 @@ export function Quiz({ questions, onFinish, footer, showUnit, record = recordWro
         </div>
       </div>
       <div className="q-card">
-        {showUnit && <span className="q-unit">第 {q.unitId} 課</span>}
+        {showUnit && getUnit(q.unitId) && <span className="q-unit">{unitLabel(getUnit(q.unitId)!)}</span>}
         {q.t === 'c' && <ChoiceQuestion key={key} q={q} {...common} />}
         {q.t === 'l' && <ListenQuestion key={key} q={q} {...common} />}
         {q.t === 'o' && <OrderQuestion key={key} q={q} {...common} />}

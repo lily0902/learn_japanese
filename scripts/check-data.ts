@@ -4,13 +4,18 @@
  * - 題目答案、選項、會話角色是否完整
  * - 羅馬拼音轉換、答案比對、同步合併
  * - 綜合測驗：每份都抽得出完整題數、單字題的選項與答案合理
+ * - 數字讀音與數字練習：音變規則、隨機出的題目答案都對得上
  */
-import { EXAMS, UNITS, WORDS } from '../src/data';
+import { EXAMS, LESSONS, PREP, TOPICS, unitLabel, UNITS, WORDS } from '../src/data';
 import type { Unit } from '../src/data/types';
-import { matchAnswer, normalize, romaToKana } from '../src/lib/kana';
+import { matchAnswer, matchDigits, normalize, romaToKana } from '../src/lib/kana';
+import {
+  AGE, FLOOR, MINUTE, PLATFORM, readCounted, readDate, readNumber, readTime, ROOM, YEN,
+} from '../src/lib/numbers';
 import { KANJI_CLASS, kana, plain, rubyRe } from '../src/lib/ruby';
 import { newCard } from '../src/lib/srs';
 import { drawExam, examTotal, grammarPool, GRAMMAR_PER_UNIT, VOCAB_PER_UNIT } from '../src/quiz/exam';
+import { DRILL_DIRS, DRILL_KINDS, DRILL_SIZE, drawDrill } from '../src/quiz/numberDrill';
 import { emptyState, mergeStates, normalizeState } from '../src/state/merge';
 
 const errors: string[] = [];
@@ -46,7 +51,7 @@ function collectZhRuby(where: string, s: string) {
 }
 
 function walkUnit(u: Unit) {
-  const at = (x: string) => `第${u.id}課 ${x}`;
+  const at = (x: string) => `${unitLabel(u)} ${x}`;
   [u.title].forEach((t) => checkText(at('標題'), t));
   if (u.vocab.length < 10) warnings.push(`第${u.id}課 單字只有 ${u.vocab.length} 個`);
   u.vocab.forEach((w, i) => { checkText(at(`單字${i + 1}`), w[0]); if (!w[1]) err(at(`單字${i + 1}`), '缺中文'); });
@@ -112,17 +117,40 @@ function walkUnit(u: Unit) {
 }
 
 // ---- 課程結構 ----
-const ids = UNITS.map((u) => u.id);
+const ids = LESSONS.map((u) => u.id);
 if (ids.join() !== Array.from({ length: 30 }, (_, i) => i + 1).join()) err('課程', `課號不連續：${ids.join()}`);
+if (PREP.map((u) => u.prep).join() !== '1,2,3,4,5') err('預備課', `編號應為 1–5：${PREP.map((u) => u.prep).join()}`);
+if (PREP.some((u) => u.id !== 100 + u.prep!)) err('預備課', '預備課 N 的課號應為 100+N');
+if (UNITS.slice(0, PREP.length).some((u) => !u.prep)) err('預備課', '預備課要排在第 1 課前面');
+if (EXAMS.some((e) => e.units.some((u) => u.prep))) err('預備課', '預備課不應該出現在綜合測驗裡');
 UNITS.forEach(walkUnit);
 
-const seen = new Map<string, number>();
+/** 刻意在兩課都教的單字（意思不同）：いただきます＝招呼語「我開動了」／敬語「吃、收下」 */
+const TAUGHT_TWICE = new Set(['いただきます']);
+const seen = new Map<string, string>();
 for (const u of UNITS) {
   for (const w of u.vocab) {
     const k = w[0];
-    if (seen.has(k)) warnings.push(`單字重複：${k}（第${seen.get(k)}課、第${u.id}課）`);
-    else seen.set(k, u.id);
+    if (seen.has(k) && !TAUGHT_TWICE.has(k)) warnings.push(`單字重複：${k}（${seen.get(k)}、${unitLabel(u)}）`);
+    else seen.set(k, unitLabel(u));
   }
+}
+
+// ---- 主題單字表 ----
+if (new Set(TOPICS.map((t) => t.id)).size !== TOPICS.length) err('主題', '主題代號重複');
+const topicSeen = new Map<string, string>();
+for (const t of TOPICS) {
+  const at = `主題「${t.name}」`;
+  if (!/^[a-z]+$/.test(t.id)) err(at, `代號只能用小寫英文：${t.id}`);
+  if (!t.desc) err(at, '缺使用提示');
+  checkText(at, t.desc);
+  if (t.words.length < 10) warnings.push(`${at} 只有 ${t.words.length} 個字`);
+  t.words.forEach((w, i) => {
+    checkText(`${at} 第${i + 1}個`, w[0]);
+    if (!w[1]) err(`${at} 第${i + 1}個`, '缺中文');
+    if (topicSeen.has(w[0])) warnings.push(`主題單字重複：${w[0]}（${topicSeen.get(w[0])}、${t.name}）`);
+    else topicSeen.set(w[0], t.name);
+  });
 }
 
 // ---- 綜合測驗 ----
@@ -177,6 +205,69 @@ if (!matchAnswer('コーヒー', ['こーひー'])) err('答案比對', '片假�
 if (!matchAnswer(' desu。', ['です'])) err('答案比對', '應忽略空白與標點');
 if (!matchAnswer('待って', ['待[ま]って'])) err('答案比對', '漢字答案應該可以通過');
 
+// ---- 數字讀音 ----
+const readingCases: [string, string[], string][] = [
+  ['0', readNumber(0), 'ゼロ'], ['4', readNumber(4), 'よん'], ['14', readNumber(14), 'じゅうよん'],
+  ['40', readNumber(40), 'よんじゅう'], ['99', readNumber(99), 'きゅうじゅうきゅう'],
+  ['300', readNumber(300), 'さんびゃく'], ['600', readNumber(600), 'ろっぴゃく'], ['800', readNumber(800), 'はっぴゃく'],
+  ['3000', readNumber(3000), 'さんぜん'], ['8000', readNumber(8000), 'はっせん'], ['1500', readNumber(1500), 'せんごひゃく'],
+  ['10000', readNumber(10000), 'いちまん'], ['12000', readNumber(12000), 'いちまんにせん'],
+  ['120000', readNumber(120000), 'じゅうにまん'], ['10000000', readNumber(10000000), 'いっせんまん'],
+  ['4円', readCounted(4, YEN), 'よえん'], ['14円', readCounted(14, YEN), 'じゅうよえん'],
+  ['150円', readCounted(150, YEN), 'ひゃくごじゅうえん'], ['3600円', readCounted(3600, YEN), 'さんぜんろっぴゃくえん'],
+  ['1歳', readCounted(1, AGE), 'いっさい'], ['8歳', readCounted(8, AGE), 'はっさい'], ['10歳', readCounted(10, AGE), 'じゅっさい'],
+  ['20歳', readCounted(20, AGE), 'はたち'], ['28歳', readCounted(28, AGE), 'にじゅうはっさい'], ['30歳', readCounted(30, AGE), 'さんじゅっさい'],
+  ['1階', readCounted(1, FLOOR), 'いっかい'], ['3階', readCounted(3, FLOOR), 'さんがい'], ['6階', readCounted(6, FLOOR), 'ろっかい'],
+  ['10階', readCounted(10, FLOOR), 'じゅっかい'], ['13階', readCounted(13, FLOOR), 'じゅうさんがい'],
+  ['806号室', readCounted(806, ROOM), 'はっぴゃくろくごうしつ'], ['4番線', readCounted(4, PLATFORM), 'よんばんせん'],
+  ['1分', readCounted(1, MINUTE), 'いっぷん'], ['20分', readCounted(20, MINUTE), 'にじゅっぷん'],
+  ['9:30', readTime(9, 30), 'くじはん'], ['4:10', readTime(4, 10), 'よじじゅっぷん'], ['7:00', readTime(7, 0), 'しちじ'],
+  ['4/1', readDate(4, 1), 'しがつついたち'], ['10/17', readDate(10, 17), 'じゅうがつじゅうしちにち'],
+  ['5/20', readDate(5, 20), 'ごがつはつか'], ['7/24', readDate(7, 24), 'しちがつにじゅうよっか'],
+  ['9/19', readDate(9, 19), 'くがつじゅうくにち'], ['12/31', readDate(12, 31), 'じゅうにがつさんじゅういちにち'],
+];
+for (const [label, got, want] of readingCases) {
+  if (got[0] !== want) err('數字讀音', `${label} → ${got.join('／')}（應為 ${want}）`);
+}
+if (!readNumber(7).includes('しち') || !readCounted(20, AGE).includes('にじゅっさい')) err('數字讀音', '另一種念法也要算對');
+if (readCounted(9, AGE).includes('くさい')) err('數字讀音', '9 歲不能念くさい');
+
+const digitCases: [string, string, boolean][] = [
+  ['3,600', '3600', true], ['３６００円', '3600', true], ['9時30分', '9:30', true], ['9時半', '9:30', true],
+  ['09:05', '9:05', true], ['10月17日', '10/17', true], ['0', '0', true], ['', '0', false],
+  ['36', '3600', false], ['9:03', '9:30', false], ['1017', '10/17', false],
+];
+for (const [input, answer, want] of digitCases) {
+  if (matchDigits(input, [answer]) !== want) err('數字比對', `「${input}」對「${answer}」應該${want ? '算對' : '算錯'}`);
+}
+
+// ---- 數字練習 ----
+for (const { key: kind } of DRILL_KINDS) {
+  for (const { key: dir } of DRILL_DIRS) {
+    const where = `數字練習 ${kind}/${dir}`;
+    for (let round = 0; round < 300; round++) {
+      const qs = drawDrill(kind, dir);
+      if (qs.length !== DRILL_SIZE) err(where, `只出了 ${qs.length} 題`);
+      if (new Set(qs.map((q) => q.id)).size !== qs.length) err(where, '題目 id 重複');
+      for (const q of qs) {
+        if (q.t === 'l') {
+          checkText(where, q.say);
+          if (q.o.length !== 4 || new Set(q.o).size !== 4) err(where, `聽力題選項不對：${q.o.join('／')}`);
+        } else if (q.t === 'i' && q.num) {
+          if (!q.say || !KANA_ONLY.test(q.say)) err(where, `朗讀的內容應該是假名：${q.say}`);
+          if (!q.a.length || q.a.some((a) => !matchDigits(a, q.a))) err(where, `數字答案自我比對失敗：${q.a.join('／')}`);
+        } else if (q.t === 'i') {
+          q.a.forEach((a) => {
+            checkText(where, a);
+            if (!/^[぀-ゟー]+$/.test(normalize(kana(a)))) err(where, `答案無法用假名輸入：${a}`);
+            if (!matchAnswer(kana(a), q.a)) err(where, `答案自我比對失敗：${a}`);
+          });
+        } else err(where, `不該出現的題型：${q.t}`);
+      }
+    }
+  }
+}
+
 // ---- 同步合併 ----
 {
   const a = emptyState();
@@ -219,7 +310,9 @@ if (!matchAnswer('待って', ['待[ま]って'])) err('答案比對', '漢字�
 
 // ---- 報告 ----
 const stats = {
-  課數: UNITS.length,
+  課數: LESSONS.length,
+  預備課: PREP.length,
+  主題單字: TOPICS.reduce((n, t) => n + t.words.length, 0),
   單字: UNITS.reduce((n, u) => n + u.vocab.length, 0),
   文法: UNITS.reduce((n, u) => n + u.grammar.length, 0),
   例句: UNITS.reduce((n, u) => n + u.grammar.reduce((k, g) => k + g.ex.length, 0), 0),

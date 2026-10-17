@@ -2,10 +2,25 @@ import type { Exam, QuestionWithId, Unit, Vocab } from './types';
 import { n5Part1 } from './n5-part1';
 import { n5Part2 } from './n5-part2';
 import { n4 } from './n4';
+import { prep } from './prep';
 
-export const UNITS: Unit[] = [...n5Part1, ...n5Part2, ...n4].sort((a, b) => a.id - b.id);
+export { TOPICS } from './topics';
+
+/** 第 1–30 課 */
+export const LESSONS: Unit[] = [...n5Part1, ...n5Part2, ...n4].sort((a, b) => a.id - b.id);
+/** 預備課排在第 1 課前面（今日任務、上一課／下一課都照這個順序） */
+export const PREP: Unit[] = [...prep].sort((a, b) => a.prep! - b.prep!);
+export const UNITS: Unit[] = [...PREP, ...LESSONS];
 
 export const getUnit = (id: number) => UNITS.find((u) => u.id === id);
+
+/** 「第 4 課」「預備課 1」 */
+export const unitLabel = (u: Unit) => (u.prep ? `預備課 ${u.prep}` : `第 ${u.id} 課`);
+
+/** 單字第一次出現在哪一課的單字表（主題單字表用來標「第 N 課」） */
+const FIRST_UNIT = new Map<string, Unit>();
+for (const u of UNITS) for (const w of u.vocab) if (!FIRST_UNIT.has(w[0])) FIRST_UNIT.set(w[0], u);
+export const taughtIn = (jp: string) => FIRST_UNIT.get(jp);
 
 /** 單字卡的 key：「課號|日文」 */
 export const wordKey = (unitId: number, w: Vocab) => `${unitId}|${w[0]}`;
@@ -27,11 +42,11 @@ for (const unit of UNITS) {
   });
 }
 
-/** 每 5 課一份綜合測驗：1–5、6–10…… */
+/** 每 5 課一份綜合測驗：1–5、6–10……（預備課不考） */
 export const EXAM_SIZE = 5;
-export const EXAMS: Exam[] = Array.from({ length: Math.floor(UNITS.length / EXAM_SIZE) }, (_, i) => ({
+export const EXAMS: Exam[] = Array.from({ length: Math.floor(LESSONS.length / EXAM_SIZE) }, (_, i) => ({
   id: i + 1,
-  units: UNITS.slice(i * EXAM_SIZE, (i + 1) * EXAM_SIZE),
+  units: LESSONS.slice(i * EXAM_SIZE, (i + 1) * EXAM_SIZE),
 }));
 
 export const getExam = (id: number) => EXAMS.find((e) => e.id === id);

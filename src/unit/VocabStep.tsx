@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
 import { CoverToggle, wait } from '../components/Misc';
@@ -10,13 +10,14 @@ import type { StepProps } from '../pages/UnitPage';
 import { addUnitCards } from '../state/actions';
 import { useAppState } from '../state/store';
 
-function VocabCard({ w, active }: { w: Vocab; active: boolean }) {
+/** 單字卡片（遮住中文時點一下顯示）；extra 會接在詞性後面 */
+export function VocabCard({ w, active = false, extra }: { w: Vocab; active?: boolean; extra?: ReactNode }) {
   const [show, setShow] = useState(false);
   return (
     <li className={`vcard ${show ? 'show' : ''} ${active ? 'active' : ''}`} onClick={() => setShow((v) => !v)}>
       <Jp className="v-jp" text={w[0]} as="div" />
       <div className="v-zh">{w[1]}</div>
-      {w[2] && <div className="v-pos">{w[2]}</div>}
+      {(w[2] || extra) && <div className="v-pos">{w[2]}{w[2] && extra && '・'}{extra}</div>}
       <SpeakButton text={w[0]} useKana />
     </li>
   );

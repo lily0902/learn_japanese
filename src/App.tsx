@@ -21,7 +21,7 @@ export default function App() {
           <Route path="unit/:id/:step?" element={<UnitPage />} />
           <Route path="exam/:id" element={<ExamPage />} />
           <Route path="review/:mode?" element={<Review />} />
-          <Route path="index/:tab?" element={<IndexPage />} />
+          <Route path="index/:tab?/:topic?" element={<IndexPage />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

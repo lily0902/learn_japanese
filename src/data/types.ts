@@ -46,11 +46,13 @@ export type Question =
   | { t: 'l'; say: string; o: string[]; e?: string }
   /** 句子重組：w 是正確順序，alt 是其他也正確的順序 */
   | { t: 'o'; zh: string; w: string[]; alt?: string[][]; e?: string }
-  /** 打字題：a 是所有可接受的答案 */
-  | { t: 'i'; zh: string; q: string; a: string[]; e?: string };
+  /** 打字題：a 是所有可接受的答案（say：先朗讀這句再作答；num：用阿拉伯數字作答，只比對數字） */
+  | { t: 'i'; zh: string; q: string; a: string[]; e?: string; say?: string; num?: boolean };
 
 export interface Unit {
   id: number;
+  /** 預備課的編號（1–3）：排在第 1 課前面，不算進綜合測驗 */
+  prep?: number;
   level: 'N5' | 'N4';
   title: string;
   zh: string;
@@ -68,4 +70,14 @@ export type QuestionWithId = Question & { id: string; unitId: number; word?: str
 export interface Exam {
   id: number;
   units: Unit[];
+}
+
+/** 主題單字表：查詢用的參考資料，不是課程（不進單字卡、不出題） */
+export interface Topic {
+  /** 網址用的代號：#/index/topics/color */
+  id: string;
+  name: string;
+  /** 一兩句使用提示 */
+  desc: string;
+  words: Vocab[];
 }

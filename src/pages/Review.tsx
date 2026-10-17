@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
 import { Hanko, useKey } from '../components/Misc';
 import { SpeakButton } from '../components/SpeakButton';
-import { QUESTIONS, WORDS } from '../data';
+import { QUESTIONS, unitLabel, WORDS } from '../data';
 import { shuffle } from '../lib/random';
 import { speak } from '../lib/speech';
 import { intervalLabel, nextInterval, newCard, type Grade } from '../lib/srs';
@@ -12,6 +12,7 @@ import { gradeWord, markReviewDone } from '../state/actions';
 import { dueKeys, learnedCount, wrongIds } from '../state/selectors';
 import { getState, useAppState } from '../state/store';
 import { Quiz } from '../quiz/Quiz';
+import NumberDrill from './NumberDrill';
 
 const GRADES: { g: Grade; label: string }[] = [
   { g: 0, label: '忘記了' },
@@ -118,7 +119,7 @@ function Flashcards({ free }: { free: boolean }) {
           {flipped ? (
             <div className="fc-back">
               <div className="fc-zh">{w[1]}</div>
-              <div className="fc-meta">{w[2] ? `${w[2]}・` : ''}第 {unit.id} 課</div>
+              <div className="fc-meta">{w[2] ? `${w[2]}・` : ''}{unitLabel(unit)}</div>
             </div>
           ) : (
             <p className="fc-tap">想一想意思，再點卡片或按空白鍵翻面</p>
@@ -193,6 +194,16 @@ function Overview() {
             {wrongN > 0 && <Link className="btn primary" to="/review/wrong">開始練習</Link>}
           </div>
         </section>
+        <section className="card">
+          <h2><Icon name="headphones" />數字練習</h2>
+          <p className="drill-preview" lang="ja" aria-hidden="true">
+            {['1,280円', '9:30', '10月17日', '8階'].map((x) => <span key={x}>{x}</span>)}
+          </p>
+          <p className="card-sub">價錢、時間、日期、年齡與樓層，每次隨機出 10 題。聽日文寫數字，或看數字打念法。</p>
+          <div className="btn-row">
+            <Link className="btn primary" to="/review/numbers">開始練習</Link>
+          </div>
+        </section>
       </div>
     </>
   );
@@ -203,5 +214,6 @@ export default function Review() {
   if (mode === 'cards') return <Flashcards key="cards" free={false} />;
   if (mode === 'free') return <Flashcards key="free" free />;
   if (mode === 'wrong') return <WrongBook />;
+  if (mode === 'numbers') return <NumberDrill />;
   return <Overview />;
 }

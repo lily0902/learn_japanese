@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { QUESTIONS } from '../data';
+import { QUESTIONS, unitLabel } from '../data';
+import type { Unit } from '../data/types';
 import type { StepProps } from '../pages/UnitPage';
 import { Quiz } from '../quiz/Quiz';
 
-export function PracticeStep({ unit, complete, nextUnitId }: StepProps & { nextUnitId?: number }) {
+export function PracticeStep({ unit, complete, nextUnit }: StepProps & { nextUnit?: Unit }) {
   const questions = unit.practice.map((_, i) => QUESTIONS.get(`${unit.id}-${i}`)!);
   return (
     <>
@@ -16,10 +17,10 @@ export function PracticeStep({ unit, complete, nextUnitId }: StepProps & { nextU
         questions={questions}
         onFinish={(score, total) => complete({ best: score, total })}
         footer={
-          nextUnitId ? (
+          nextUnit ? (
             <>
               <Link className="btn" to="/">回到今日任務</Link>
-              <Link className="btn primary" to={`/unit/${nextUnitId}`}>前往第 {nextUnitId} 課<Icon name="arrowRight" /></Link>
+              <Link className="btn primary" to={`/unit/${nextUnit.id}`}>前往{unitLabel(nextUnit)}<Icon name="arrowRight" /></Link>
             </>
           ) : (
             <Link className="btn primary" to="/">回到今日任務</Link>

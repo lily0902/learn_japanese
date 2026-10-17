@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
 import { Hanko } from '../components/Misc';
 import { toast } from '../components/Toast';
-import { getUnit, UNITS } from '../data';
+import { getUnit, unitLabel, UNITS } from '../data';
 import { completeStep } from '../state/actions';
 import { unitProgress } from '../state/selectors';
 import { useAppState } from '../state/store';
@@ -50,7 +50,7 @@ export default function UnitPage() {
 
   const complete = (key: StepKey) => (score?: { best: number; total: number }) => {
     const justDone = completeStep(unit, key, score);
-    if (justDone) toast(`第 ${unit.id} 課完成！蓋上「済」章了`);
+    if (justDone) toast(`${unitLabel(unit)}${unit.prep ? ' ' : ''}完成！蓋上「済」章了`);
     return justDone;
   };
   const goNext = (key: StepKey) => () => {
@@ -65,11 +65,11 @@ export default function UnitPage() {
       <nav className="crumbs" aria-label="路徑">
         <Link to="/toc"><Icon name="arrowLeft" className="ic-sm" />目錄</Link>
         <span aria-hidden="true">/</span>
-        <span>第 {unit.id} 課</span>
+        <span>{unitLabel(unit)}</span>
       </nav>
 
       <header className="unit-head">
-        <p className="unit-no">{unit.level}・第 {unit.id} 課</p>
+        <p className="unit-no">{unit.level}・{unitLabel(unit)}</p>
         <Jp as="h1" text={unit.title} />
         <p className="unit-zh">{unit.zh}</p>
         <p className="goal">
@@ -100,12 +100,12 @@ export default function UnitPage() {
         {current === 'vocab' && <VocabStep {...props('vocab')} />}
         {current === 'grammar' && <GrammarStep {...props('grammar')} />}
         {current === 'dialogue' && <DialogueStep {...props('dialogue')} />}
-        {current === 'practice' && <PracticeStep {...props('practice')} nextUnitId={nextU?.id} />}
+        {current === 'practice' && <PracticeStep {...props('practice')} nextUnit={nextU} />}
       </section>
 
       <nav className="unit-pager" aria-label="上一課與下一課">
-        {prev ? <Link className="btn ghost" to={`/unit/${prev.id}`}><Icon name="arrowLeft" />第 {prev.id} 課</Link> : <span />}
-        {nextU && <Link className="btn ghost" to={`/unit/${nextU.id}`}>第 {nextU.id} 課<Icon name="arrowRight" /></Link>}
+        {prev ? <Link className="btn ghost" to={`/unit/${prev.id}`}><Icon name="arrowLeft" />{unitLabel(prev)}</Link> : <span />}
+        {nextU && <Link className="btn ghost" to={`/unit/${nextU.id}`}>{unitLabel(nextU)}<Icon name="arrowRight" /></Link>}
       </nav>
     </>
   );

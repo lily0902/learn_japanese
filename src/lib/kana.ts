@@ -90,3 +90,13 @@ export function matchAnswer(input: string, answers: string[]): boolean {
   if (!n) return false;
   return answers.some((a) => normalize(kana(a)) === n || normalize(plain(a)) === n);
 }
+
+/** 「3,600」「３６００円」「9時30分」「9時半」→ 只留下數字：3600、9/30 */
+const digitGroups = (s: string) =>
+  (s.normalize('NFKC').replace(/,/g, '').replace(/半/g, ':30').match(/\d+/g) ?? []).map(Number).join('/');
+
+/** 數字題：只比對數字，「9:30」「9時30分」「9時半」都算對 */
+export function matchDigits(input: string, answers: string[]): boolean {
+  const n = digitGroups(input);
+  return !!n && answers.some((a) => digitGroups(a) === n);
+}

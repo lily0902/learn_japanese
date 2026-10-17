@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
-import { examRange, UNITS } from '../data';
+import { examRange, LESSONS, PREP, unitLabel, UNITS } from '../data';
 import { addDays, formatLong, today, weekday } from '../lib/date';
 import { examMinutes, examTotal } from '../quiz/exam';
 import { skipExam } from '../state/actions';
@@ -72,10 +72,12 @@ export default function Home() {
   const doneCount = UNITS.filter((u) => isUnitDone(s, u.id)).length;
   const reviewedToday = !!s.days[today()]?.rev;
 
-  const levels = (['N5', 'N4'] as const).map((lv) => {
-    const list = UNITS.filter((u) => u.level === lv);
-    return { lv, done: list.filter((u) => isUnitDone(s, u.id)).length, total: list.length };
-  });
+  const levels = [
+    { lv: '預備', list: PREP },
+    { lv: 'N5', list: LESSONS.filter((u) => u.level === 'N5') },
+    { lv: 'N4', list: LESSONS.filter((u) => u.level === 'N4') },
+  ].map(({ lv, list }) => ({ lv, done: list.filter((u) => isUnitDone(s, u.id)).length, total: list.length }));
+  const doneLabel = doneToday.map(unitLabel).join('、');
 
   // 5 課都完成後，先推薦綜合測驗；可以跳過直接學下一課
   const examSub = exam && (
@@ -83,7 +85,7 @@ export default function Home() {
       {examTotal(exam)} 題・約 {examMinutes(exam)} 分鐘・80% 合格
       <br />
       <button type="button" className="link-btn" onClick={() => skipExam(exam.id)}>
-        {nu ? `跳過，直接學第 ${nu.id} 課` : '先跳過'}
+        {nu ? `跳過，直接學${unitLabel(nu)}` : '先跳過'}
       </button>
     </>
   );
@@ -97,7 +99,7 @@ export default function Home() {
       <Task
         n={1}
         done
-        title={`今天完成了第 ${doneToday.map((u) => u.id).join('、')} 課`}
+        title={`今天完成了${doneLabel}`}
         sub={<>下一步：{examRange(exam)}綜合測驗・{examSub}</>}
         action={examAction}
       />
@@ -107,8 +109,8 @@ export default function Home() {
       <Task
         n={1}
         done
-        title={`今天完成了第 ${doneToday.map((u) => u.id).join('、')} 課`}
-        sub={nu ? `還想多學一點？下一課是第 ${nu.id} 課。` : '全部課程都完成了！'}
+        title={`今天完成了${doneLabel}`}
+        sub={nu ? `還想多學一點？下一課是${unitLabel(nu)}。` : '全部課程都完成了！'}
         action={nu && <Link className="btn small" to={`/unit/${nu.id}`}>繼續下一課</Link>}
       />
     );
@@ -119,7 +121,7 @@ export default function Home() {
     task1 = (
       <Task
         n={1}
-        title={<>學習第 {nu.id} 課「<Jp text={nu.title} />」</>}
+        title={<>學習{unitLabel(nu)}「<Jp text={nu.title} />」</>}
         sub={`${nu.zh}・已完成 ${steps} / 4 步驟`}
         action={<Link className="btn primary" to={`/unit/${nu.id}`}>{steps ? '繼續學習' : '開始學習'}<Icon name="arrowRight" /></Link>}
       />
