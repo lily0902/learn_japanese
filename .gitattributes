@@ -1,0 +1,4 @@
+# 一律用 LF 換行：在 Windows 上編輯也不會把整個檔案改成 CRLF
+* text=auto eol=lf
+
+*.png binary
