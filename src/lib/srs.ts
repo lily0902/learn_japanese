@@ -9,7 +9,11 @@ export interface Card { i: number; e: number; r: number; due: string; t: number 
 /** 0 忘記了、1 有點難、2 記得、3 太簡單 */
 export type Grade = 0 | 1 | 2 | 3;
 
-export const newCard = (): Card => ({ i: 0, e: 2.5, r: 0, due: today(), t: Date.now() });
+/**
+ * 新卡的 t 是 0：還沒複習過，同步合併時一定輸給另一台裝置已經複習過的同一張卡，
+ * 不會把別台的進度蓋回新卡（第一次評分時 gradeCard 才寫入真正的時間）
+ */
+export const newCard = (): Card => ({ i: 0, e: 2.5, r: 0, due: today(), t: 0 });
 
 /** 按下某個評分後，下次要隔幾天 */
 export function nextInterval(c: Card, g: Grade): number {

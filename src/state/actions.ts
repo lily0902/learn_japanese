@@ -41,17 +41,13 @@ export function addUnitCards(unit: Unit): number {
   return added;
 }
 
-/*
- * 例句卡的新卡 t 設成 0：還沒複習過，同步合併時不會蓋掉另一台裝置已經複習過的同一張卡
- */
-
 /** 把這課的例句加入例句卡（讀完文法步驟時；已經有的不會重設） */
 export function addSentenceCards(unit: Unit): number {
   let added = 0;
   update((s) => {
     for (const [k, e] of SENTENCES) {
       if (e.unit !== unit || s.srs[k]) continue;
-      s.srs[k] = { ...newCard(), t: 0 };
+      s.srs[k] = newCard();
       added++;
     }
   });
@@ -68,7 +64,7 @@ export function backfillSentenceCards() {
   if (!missing.length) return;
   update((s) => {
     missing.forEach(([k], i) => {
-      s.srs[k] ??= { ...newCard(), due: addDays(today(), Math.floor(i / BACKFILL_PER_DAY)), t: 0 };
+      s.srs[k] ??= { ...newCard(), due: addDays(today(), Math.floor(i / BACKFILL_PER_DAY)) };
     });
   });
 }
