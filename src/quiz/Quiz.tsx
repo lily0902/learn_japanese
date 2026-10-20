@@ -16,6 +16,8 @@ interface QuizProps {
   footer?: ReactNode;
   /** 顯示題目出自第幾課（錯題本用） */
   showUnit?: boolean;
+  /** 自訂題目右上角的標籤（回傳 null 就不顯示），優先於 showUnit */
+  tag?: (q: QuestionWithId) => ReactNode;
 }
 
 function resultCopy(score: number, total: number) {
@@ -28,7 +30,7 @@ function resultCopy(score: number, total: number) {
 
 const recordWrong = (q: QuestionWithId, ok: boolean) => recordAnswer(q.id, ok);
 
-export function Quiz({ questions, onFinish, footer, showUnit, record = recordWrong }: QuizProps) {
+export function Quiz({ questions, onFinish, footer, showUnit, tag, record = recordWrong }: QuizProps) {
   const [round, setRound] = useState({ list: questions, n: 0, retry: false });
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -94,6 +96,8 @@ export function Quiz({ questions, onFinish, footer, showUnit, record = recordWro
     </button>
   );
   const key = `${round.n}-${idx}`;
+  const unit = getUnit(q.unitId);
+  const label = tag ? tag(q) : showUnit && unit ? unitLabel(unit) : null;
   const common = { onAnswer, nextButton };
 
   return (
@@ -105,7 +109,7 @@ export function Quiz({ questions, onFinish, footer, showUnit, record = recordWro
         </div>
       </div>
       <div className="q-card">
-        {showUnit && getUnit(q.unitId) && <span className="q-unit">{unitLabel(getUnit(q.unitId)!)}</span>}
+        {label && <span className="q-unit">{label}</span>}
         {q.t === 'c' && <ChoiceQuestion key={key} q={q} {...common} />}
         {q.t === 'l' && <ListenQuestion key={key} q={q} {...common} />}
         {q.t === 'o' && <OrderQuestion key={key} q={q} {...common} />}

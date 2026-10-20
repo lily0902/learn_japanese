@@ -1,4 +1,4 @@
-import { EXAMS, QUESTIONS, UNITS, WORDS } from '../data';
+import { EXAMS, QUESTIONS, SENTENCES, UNITS, WORDS } from '../data';
 import type { Exam, Unit } from '../data/types';
 import { addDays, today } from '../lib/date';
 import { STEPS, type AppState } from './types';
@@ -17,6 +17,13 @@ export function dueKeys(s: AppState): string[] {
 }
 
 export const learnedCount = (s: AppState) => Object.keys(s.srs).filter((k) => WORDS.has(k)).length;
+
+export function dueSentenceKeys(s: AppState): string[] {
+  const t = today();
+  return Object.keys(s.srs).filter((k) => SENTENCES.has(k) && s.srs[k].due <= t);
+}
+
+export const sentenceCount = (s: AppState) => Object.keys(s.srs).filter((k) => SENTENCES.has(k)).length;
 
 export const wrongIds = (s: AppState) =>
   Object.keys(s.wrong).filter((k) => !s.wrong[k].cleared && QUESTIONS.has(k));

@@ -7,7 +7,8 @@ import { addDays, formatLong, today, weekday } from '../lib/date';
 import { examMinutes, examTotal } from '../quiz/exam';
 import { skipExam } from '../state/actions';
 import {
-  activeDays, dueKeys, isUnitDone, learnedCount, nextUnit, pendingExam, stepsDone, streak, unitsDoneOn, wrongIds,
+  activeDays, dueKeys, dueSentenceKeys, isUnitDone, learnedCount, nextUnit, pendingExam, sentenceCount, stepsDone, streak,
+  unitsDoneOn, wrongIds,
 } from '../state/selectors';
 import { useAppState } from '../state/store';
 
@@ -67,6 +68,8 @@ export default function Home() {
   const exam = pendingExam(s);
   const due = dueKeys(s).length;
   const learned = learnedCount(s);
+  const sDue = dueSentenceKeys(s).length;
+  const sLearned = sentenceCount(s);
   const wrongN = wrongIds(s).length;
   const doneToday = unitsDoneOn(s, today());
   const doneCount = UNITS.filter((u) => isUnitDone(s, u.id)).length;
@@ -146,6 +149,21 @@ export default function Home() {
     task2 = <Task n={2} done title="單字卡複習完成" sub={reviewedToday ? '今天的份已經複習完了！' : '今天沒有到期的卡片。'} />;
   }
 
+  // 例句卡：讀完第一課的文法後才出現
+  let task3: ReactNode = null;
+  if (sLearned > 0 && sDue > 0) {
+    task3 = (
+      <Task
+        n={3}
+        title={`說出 ${sDue} 句到期的例句`}
+        sub={`看中文說日文・大約 ${Math.max(1, Math.ceil((sDue * 20) / 60))} 分鐘`}
+        action={<Link className="btn primary" to="/review/sentences">開始說說看<Icon name="arrowRight" /></Link>}
+      />
+    );
+  } else if (sLearned > 0) {
+    task3 = <Task n={3} done title="例句卡複習完成" sub="今天沒有要說的例句了。" />;
+  }
+
   return (
     <div className="stack">
       <section className="hero">
@@ -173,12 +191,13 @@ export default function Home() {
         <ol className="tasks">
           {task1}
           {task2}
+          {task3}
           {wrongN > 0 && (
             <Task
               n="＋"
               optional
               title={`錯題本還有 ${wrongN} 題`}
-              sub="選做：把之前答錯的題目再練一次，答對就會移除。"
+              sub="選做：把之前答錯的題目再練一次，隔天以後答對就會移除。"
               action={<Link className="btn small" to="/review/wrong">練習錯題</Link>}
             />
           )}
@@ -187,7 +206,7 @@ export default function Home() {
 
       <section className="card">
         <h2>學習印章</h2>
-        <p className="card-sub" style={{ marginBottom: 12 }}>完成一課、把到期的單字卡複習完，或考完一份綜合測驗，當天就會蓋上印章。</p>
+        <p className="card-sub" style={{ marginBottom: 12 }}>完成一課、把到期的單字卡或例句卡複習完，或考完一份綜合測驗，當天就會蓋上印章。</p>
         <StampCalendar days={activeDays(s)} />
       </section>
 

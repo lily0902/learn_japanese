@@ -1,4 +1,4 @@
-import type { Exam, QuestionWithId, Unit, Vocab } from './types';
+import type { Exam, GrammarPoint, QuestionWithId, Unit, Vocab } from './types';
 import { n5Part1 } from './n5-part1';
 import { n5Part2 } from './n5-part2';
 import { n4 } from './n4';
@@ -26,11 +26,24 @@ export const taughtIn = (jp: string) => FIRST_UNIT.get(jp);
 export const wordKey = (unitId: number, w: Vocab) => `${unitId}|${w[0]}`;
 
 export const WORDS = new Map<string, { w: Vocab; unit: Unit }>();
+
+/** 例句卡的 key：「s:課號|日文」 */
+export const sentenceKey = (unitId: number, jp: string) => `s:${unitId}|${jp}`;
+
+/**
+ * 例句卡：看中文說出整句日文。每個文法點挑第一句完整的句子；
+ * 「買います → 買って」這種動詞變化表不是句子，整個文法點都是變化表的就跳過
+ */
+export const SENTENCES = new Map<string, { jp: string; zh: string; g: GrammarPoint; unit: Unit }>();
 /** 練習題是「課號-第幾題」，文法的小試身手是「課號-g第幾個文法」 */
 export const QUESTIONS = new Map<string, QuestionWithId>();
 
 for (const unit of UNITS) {
   for (const w of unit.vocab) WORDS.set(wordKey(unit.id, w), { w, unit });
+  for (const g of unit.grammar) {
+    const ex = g.ex.find(([jp]) => !jp.includes('→') && /[。？！]$/.test(jp));
+    if (ex) SENTENCES.set(sentenceKey(unit.id, ex[0]), { jp: ex[0], zh: ex[1], g, unit });
+  }
   unit.practice.forEach((q, i) => {
     const id = `${unit.id}-${i}`;
     QUESTIONS.set(id, { ...q, id, unitId: unit.id });

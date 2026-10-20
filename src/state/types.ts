@@ -39,6 +39,10 @@ export interface Settings {
   furi: boolean;
   hideZh: boolean;
   autoplay: boolean;
+  /** 會話：對方的台詞先遮住，只聽聲音 */
+  listen: boolean;
+  /** 會話：輪到你時只給中文，自己說出日文再看答案 */
+  speak: boolean;
   rate: number;
   theme: Theme;
   t: number;

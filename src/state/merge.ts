@@ -5,6 +5,8 @@ export const defaultSettings = (): Settings => ({
   furi: true,
   hideZh: false,
   autoplay: true,
+  listen: false,
+  speak: false,
   rate: 0.9,
   theme: 'auto',
   t: 0,

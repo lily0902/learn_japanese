@@ -1,6 +1,6 @@
-import { wordKey } from '../data';
+import { SENTENCES, wordKey } from '../data';
 import type { Unit } from '../data/types';
-import { today } from '../lib/date';
+import { addDays, dayStr, today } from '../lib/date';
 import { gradeCard, newCard, type Card, type Grade } from '../lib/srs';
 import { passMark } from '../quiz/exam';
 import { emptyState, normalizeState } from './merge';
@@ -41,6 +41,39 @@ export function addUnitCards(unit: Unit): number {
   return added;
 }
 
+/*
+ * 例句卡的新卡 t 設成 0：還沒複習過，同步合併時不會蓋掉另一台裝置已經複習過的同一張卡
+ */
+
+/** 把這課的例句加入例句卡（讀完文法步驟時；已經有的不會重設） */
+export function addSentenceCards(unit: Unit): number {
+  let added = 0;
+  update((s) => {
+    for (const [k, e] of SENTENCES) {
+      if (e.unit !== unit || s.srs[k]) continue;
+      s.srs[k] = { ...newCard(), t: 0 };
+      added++;
+    }
+  });
+  return added;
+}
+
+/** 補卡時每天排幾句，避免一次全部到期 */
+export const BACKFILL_PER_DAY = 6;
+
+/** 例句卡上線之前就讀完文法的課：照課程順序補上例句卡，分幾天排進複習 */
+export function backfillSentenceCards() {
+  const s0 = getState();
+  const missing = [...SENTENCES].filter(([k, e]) => !s0.srs[k] && s0.units[e.unit.id]?.grammar);
+  if (!missing.length) return;
+  update((s) => {
+    missing.forEach(([k], i) => {
+      s.srs[k] ??= { ...newCard(), due: addDays(today(), Math.floor(i / BACKFILL_PER_DAY)), t: 0 };
+    });
+  });
+}
+
+/** 單字卡、例句卡共用：按下評分後排下一次複習 */
 export function gradeWord(key: string, g: Grade): Card {
   let next = getState().srs[key];
   update((s) => {
@@ -54,7 +87,10 @@ export function recordAnswer(questionId: string, ok: boolean) {
   update((s) => {
     const prev = s.wrong[questionId];
     if (ok) {
-      if (prev && !prev.cleared) s.wrong[questionId] = { ...prev, cleared: true, t: Date.now() };
+      // 答錯當天再答對不算：剛看過答案馬上答對，不代表記住了，隔天以後答對才移除
+      if (prev && !prev.cleared && dayStr(new Date(prev.t)) < today()) {
+        s.wrong[questionId] = { ...prev, cleared: true, t: Date.now() };
+      }
     } else {
       s.wrong[questionId] = { n: (prev?.n ?? 0) + 1, t: Date.now() };
     }

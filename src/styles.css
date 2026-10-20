@@ -259,6 +259,7 @@ main:focus, main:focus-visible { outline: none; }
   font-size: 14px; font-weight: 500; cursor: pointer;
 }
 .toggle-btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.toggle-btn[disabled] { opacity: .45; cursor: not-allowed; }
 
 /* ---------- Home ---------- */
 .hero {
@@ -538,8 +539,23 @@ main:focus, main:focus-visible { outline: none; }
 .bubble .who { grid-column: 1 / -1; font-size: 12px; color: var(--ink-3); font-weight: 700; }
 .bubble .who .jp { font-weight: 600; }
 .bubble .b-jp { font-size: 18px; line-height: 2; }
-.bubble .b-zh { font-size: 14px; color: var(--ink-2); grid-column: 1; }
-.bubble .icon-btn { grid-row: 2 / span 2; grid-column: 2; width: 40px; height: 40px; }
+.bubble .b-zh { font-size: 14px; color: var(--ink-2); }
+.bubble .b-text { position: relative; grid-column: 1; min-width: 0; }
+.bubble .icon-btn { grid-row: 2; grid-column: 2; width: 40px; height: 40px; }
+/* 只聽聲音：對方的台詞先模糊，點「看字幕」才顯示 */
+.bubble .b-jp, .bubble .b-zh { transition: filter var(--dur) var(--ease-out); }
+.bubble.covered .b-jp, .bubble.covered .b-zh { filter: blur(7px); user-select: none; pointer-events: none; }
+.b-peek {
+  position: absolute; inset: -4px; display: grid; place-items: center;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.b-peek > span {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--shadow-1);
+  font-size: 13px; font-weight: 700; color: var(--ink-2);
+  transition: border-color var(--dur-fast), color var(--dur-fast);
+}
+.b-peek:hover > span { border-color: var(--ai); color: var(--ai); }
 @keyframes pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .typing { align-self: flex-start; display: flex; gap: 4px; padding: 12px 16px; border-radius: 16px; background: var(--surface-2); }
 .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); animation: blink 1s infinite; }
@@ -551,6 +567,39 @@ main:focus, main:focus-visible { outline: none; }
 .chat-act .prompt { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
 .choices { display: grid; gap: 8px; }
 .choices .opt { font-size: 17px; }
+
+.sec-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.mode-hint { display: grid; gap: 4px; margin: -2px 0 12px; }
+.mode-hint p { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; font-size: 14px; color: var(--ink-2); }
+.mode-hint .ic { margin-top: 4px; color: var(--shu); }
+.mode-hint b { color: var(--ink); }
+
+/* 自己說：中文提示 → 看答案 → 自評 */
+.say { border: 2px dashed var(--shu); border-radius: var(--r); padding: 14px 16px; background: var(--surface); }
+.say-zh {
+  font-family: var(--font-head); font-size: clamp(20px, 4.4vw, 24px); font-weight: 700;
+  line-height: 1.6; margin: 2px 0 14px; text-wrap: balance;
+}
+.say-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
+.say-tip { font-size: 14px; color: var(--ink-2); }
+.say .grades { margin-top: 10px; }
+.pitfalls { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--line-strong); }
+.pitfalls summary {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; list-style: none;
+  font-size: 14px; font-weight: 700; color: var(--ai); border-radius: 6px;
+}
+.pitfalls summary::-webkit-details-marker { display: none; }
+.pitfalls summary::before {
+  content: ""; width: 7px; height: 7px; margin: 0 2px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg); transition: transform var(--dur-fast) var(--ease-out);
+}
+.pitfalls[open] summary::before { transform: translateY(-2px) rotate(45deg); }
+.pitfalls ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 10px; }
+.pitfalls li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; }
+.pitfalls li > .ic { color: var(--bad); margin-top: 9px; }
+.pf-jp { font-size: 16px; line-height: 1.9; }
+.pf-why { font-size: 14px; color: var(--ink-2); }
 
 /* Quiz */
 .quiz-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -627,6 +676,18 @@ main:focus, main:focus-visible { outline: none; }
 .fc-zh { font-size: 22px; font-weight: 700; }
 .fc-meta { font-size: 13px; color: var(--ink-3); }
 .fc-tap { font-size: 13px; color: var(--ink-3); }
+/* 看中文說日文：例句卡、熟了的單字卡 */
+.fc-mode {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; color: var(--shu); background: var(--shu-soft);
+}
+.fc-zh.big { font-family: var(--font-head); font-size: clamp(26px, 6vw, 34px); line-height: 1.5; }
+.fc-prompt {
+  font-family: var(--font-head); font-size: clamp(22px, 5vw, 28px); font-weight: 700;
+  line-height: 1.6; max-width: 26em; text-wrap: balance;
+}
+.fc-sentence { font-size: clamp(22px, 5vw, 28px); line-height: 2.1; overflow-wrap: anywhere; }
+.fc-back.answer { align-self: stretch; padding-top: 14px; border-top: 1px dashed var(--line-strong); }
 .grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; }
 .grade {
   min-height: 64px; border-radius: 14px; border: 1.5px solid var(--line-strong); background: var(--surface);
@@ -639,7 +700,7 @@ main:focus, main:focus-visible { outline: none; }
 .grade:active { transform: scale(.97); }
 @media (max-width: 420px) { .grades { grid-template-columns: repeat(2, 1fr); } }
 
-.review-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.review-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
 .big-num { font-family: var(--font-head); font-size: 44px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .big-num small { font-size: 16px; color: var(--ink-3); font-weight: 500; margin-left: 4px; }
 
@@ -737,6 +798,8 @@ select.select {
 .done-card { margin-top: 4px; }
 .done-title { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; color: var(--ok); margin-bottom: 4px; }
 .done-card .btn-row { margin-top: 14px; }
+.said-score { margin-bottom: 4px; }
+.said-score b { color: var(--shu); font-size: 18px; font-variant-numeric: tabular-nums; }
 
 .q-unit { float: right; font-size: 12px; font-weight: 700; color: var(--ink-3); background: var(--surface-2); padding: 3px 10px; border-radius: 999px; }
 .big-play.speaking { background: var(--shu); }

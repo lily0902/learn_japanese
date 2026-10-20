@@ -3,9 +3,11 @@ import { Icon } from '../components/Icon';
 import { Jp, renderRich } from '../components/Jp';
 import { CoverToggle, cx, Zh } from '../components/Misc';
 import { SpeakButton } from '../components/SpeakButton';
+import { toast } from '../components/Toast';
 import type { GrammarPoint } from '../data/types';
 import { shuffle } from '../lib/random';
 import type { StepProps } from '../pages/UnitPage';
+import { addSentenceCards } from '../state/actions';
 import { useAppState } from '../state/store';
 
 /** 每個文法點最後的「小試身手」：選錯可以再選，直到選對 */
@@ -97,7 +99,14 @@ function GrammarCard({ g, i }: { g: GrammarPoint; i: number }) {
 
 export function GrammarStep({ unit, done, complete, next }: StepProps) {
   const { settings } = useAppState();
-  const finish = () => { if (!done) complete(); next(); };
+  const finish = () => {
+    if (!done) {
+      const added = addSentenceCards(unit);
+      complete();
+      if (added) toast(`已加入 ${added} 張例句卡，之後會在「複習」出現`);
+    }
+    next();
+  };
   return (
     <>
       <div className="sec-head">
@@ -110,7 +119,7 @@ export function GrammarStep({ unit, done, complete, next }: StepProps) {
       </div>
       <div className="step-foot">
         <button type="button" className="btn primary" onClick={finish}>
-          {done ? '下一步：會話' : '文法讀完了'}
+          {done ? '下一步：會話' : '文法讀完了，加入例句卡'}
           <Icon name="arrowRight" />
         </button>
       </div>

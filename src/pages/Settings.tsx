@@ -214,6 +214,12 @@ export default function Settings() {
         <Row title="會話自動朗讀" desc="角色扮演時自動唸出每一句台詞。">
           <Switch label="會話自動朗讀" checked={settings.autoplay} onChange={(v) => setSetting('autoplay', v)} />
         </Row>
+        <Row title="會話只聽聲音" desc="對方的台詞先遮住，只靠耳朵聽，聽不懂再點開字幕。">
+          <Switch label="會話只聽聲音" checked={settings.listen} onChange={(v) => setSetting('listen', v)} />
+        </Row>
+        <Row title="會話自己說" desc="輪到你時只給中文提示，自己用日文說出來再看答案。">
+          <Switch label="會話自己說" checked={settings.speak} onChange={(v) => setSetting('speak', v)} />
+        </Row>
         <Row title="語速" desc={`${settings.rate.toFixed(1)} 倍`}>
           <input
             className="range"

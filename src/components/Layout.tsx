@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { setSpeechRate, stopSpeaking } from '../lib/speech';
 import { setSetting } from '../state/actions';
-import { dueKeys } from '../state/selectors';
+import { dueKeys, dueSentenceKeys } from '../state/selectors';
 import { useAppState } from '../state/store';
 import { useSyncInfo, type SyncStatus } from '../state/sync';
 import { Icon, type IconName } from './Icon';
@@ -30,7 +30,7 @@ export function Layout() {
   const { pathname } = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const prevPath = useRef(pathname);
-  const due = dueKeys(state).length;
+  const due = dueKeys(state).length + dueSentenceKeys(state).length;
   const { furi, theme, rate } = state.settings;
 
   useEffect(() => { document.body.classList.toggle('no-furi', !furi); }, [furi]);
@@ -73,7 +73,7 @@ export function Layout() {
                   <Icon name={item.icon} />
                   <span>{item.label}</span>
                   {item.to === '/review' && due > 0 && (
-                    <span className="badge" aria-label={`${due} 張單字卡待複習`}>{due > 99 ? '99+' : due}</span>
+                    <span className="badge" aria-label={`${due} 張卡片待複習`}>{due > 99 ? '99+' : due}</span>
                   )}
                 </Link>
               );
