@@ -29,7 +29,6 @@ export function Layout() {
   const sync = useSyncInfo();
   const { pathname } = useLocation();
   const mainRef = useRef<HTMLElement>(null);
-  const prevPath = useRef(pathname);
   const due = dueKeys(state).length + dueSentenceKeys(state).length;
   const { furi, theme, rate } = state.settings;
 
@@ -42,13 +41,10 @@ export function Layout() {
   useEffect(() => { setSpeechRate(rate); }, [rate]);
 
   // 換頁：停止朗讀、回到頂端、把焦點移到主內容（螢幕報讀器友善）
-  // 同一課裡切換步驟時不捲回頂端，交給課程頁自己處理
+  // 課程頁要記住看到哪裡，捲動交給課程頁自己處理
   useEffect(() => {
-    const sameUnit = (p: string) => p.match(/^\/unit\/\d+/)?.[0];
-    const keepScroll = sameUnit(pathname) && sameUnit(pathname) === sameUnit(prevPath.current);
-    prevPath.current = pathname;
     stopSpeaking();
-    if (!keepScroll) window.scrollTo(0, 0);
+    if (!pathname.startsWith('/unit/')) window.scrollTo(0, 0);
     mainRef.current?.focus({ preventScroll: true });
   }, [pathname]);
 

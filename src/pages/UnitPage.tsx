@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
@@ -23,24 +23,49 @@ export interface StepProps {
   next: () => void;
 }
 
+/*
+ * 單字、文法上次看到的位置（「課-步驟」→ scrollY），只記在這次開啟期間。
+ * 會話和練習一離開就從頭開始，記位置沒有意義
+ */
+const scrollMemo = new Map<string, number>();
+const REMEMBER: StepKey[] = ['vocab', 'grammar'];
+
 export default function UnitPage() {
   const { id, step } = useParams();
   const navigate = useNavigate();
   const s = useAppState();
   const unit = getUnit(Number(id));
   const anchor = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
+  const lastUnit = useRef<number>(undefined);
 
   const p = unit ? unitProgress(s, unit.id) : {};
   const current: StepKey =
     (STEPS.find((x) => x.key === step)?.key) ?? (STEPS.find((x) => !p[x.key])?.key ?? 'vocab');
+  const memoKey = `${unit?.id}-${current}`;
 
-  // 切換步驟時捲到步驟列（第一次進來不用）
-  useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    const el = anchor.current;
-    if (el && window.scrollY > el.offsetTop) window.scrollTo({ top: el.offsetTop - 8 });
-  }, [current]);
+  // 換課、換步驟時決定捲到哪：回到看過的單字／文法就捲回上次的位置；
+  // 同一課換到其他步驟捲到步驟列；剛進來或換了一課從頂端開始
+  useLayoutEffect(() => {
+    if (!unit) return;
+    const saved = scrollMemo.get(memoKey);
+    const sameUnit = lastUnit.current === unit.id;
+    lastUnit.current = unit.id;
+    if (saved !== undefined) window.scrollTo(0, saved);
+    else if (!sameUnit) window.scrollTo(0, 0);
+    else {
+      const el = anchor.current;
+      if (el && window.scrollY > el.offsetTop) window.scrollTo({ top: el.offsetTop - 8 });
+    }
+  }, [memoKey]);
+
+  // 邊捲邊記。用 layout effect 是為了在內容換掉的同一刻就拿掉監聽，
+  // 不然瀏覽器因為頁面變短而自動修正的捲動位置，會被記成上一個步驟的
+  useLayoutEffect(() => {
+    if (!REMEMBER.includes(current)) return;
+    const save = () => scrollMemo.set(memoKey, window.scrollY);
+    window.addEventListener('scroll', save, { passive: true });
+    return () => window.removeEventListener('scroll', save);
+  }, [memoKey]);
 
   if (!unit) return <Navigate to="/toc" replace />;
 
