@@ -19,6 +19,7 @@ export const emptyState = (): AppState => ({
   wrong: {},
   exams: {},
   days: {},
+  seen: {},
   settings: defaultSettings(),
 });
 
@@ -36,6 +37,7 @@ export function normalizeState(raw: unknown): AppState {
     wrong: pick<AppState['wrong']>('wrong') ?? {},
     exams: pick<AppState['exams']>('exams') ?? {},
     days: pick<AppState['days']>('days') ?? {},
+    seen: pick<AppState['seen']>('seen') ?? {},
     settings: { ...base.settings, ...(pick<Partial<Settings>>('settings') ?? {}) },
   };
 }
@@ -92,6 +94,7 @@ function mergeByTime<T extends { t: number }>(a: Record<string, T>, b: Record<st
  * - 單字卡、錯題、設定：取最後更新的那一份
  * - 綜合測驗：分數取高的、合格日期取早的
  * - 每日紀錄：取較大值
+ * - 內容更新的「看過了」：只要任一邊按過就算，時間取最早
  * 這樣手機和電腦都學過，也不會互相蓋掉。
  */
 export function mergeStates(a: AppState, b: AppState): AppState {
@@ -107,6 +110,8 @@ export function mergeStates(a: AppState, b: AppState): AppState {
   for (const [d, log] of Object.entries(b.days)) {
     days[d] = compact({ rev: maxCount(days[d]?.rev, log.rev), exam: maxCount(days[d]?.exam, log.exam) });
   }
+  const seen: AppState['seen'] = { ...a.seen };
+  for (const [k, t] of Object.entries(b.seen)) seen[k] = minDefined(seen[k], t)!;
   return {
     v: 1,
     units,
@@ -114,6 +119,7 @@ export function mergeStates(a: AppState, b: AppState): AppState {
     wrong: mergeByTime<WrongEntry>(a.wrong, b.wrong),
     exams,
     days,
+    seen,
     settings: b.settings.t > a.settings.t ? b.settings : a.settings,
   };
 }

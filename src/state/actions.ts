@@ -1,4 +1,4 @@
-import { SENTENCES, wordKey } from '../data';
+import { SENTENCES, wordKey, WORDS } from '../data';
 import type { Unit } from '../data/types';
 import { addDays, dayStr, today } from '../lib/date';
 import { gradeCard, newCard, type Card, type Grade } from '../lib/srs';
@@ -55,19 +55,29 @@ export function addSentenceCards(unit: Unit): number {
   return added;
 }
 
-/** 補卡時每天排幾句，避免一次全部到期 */
+/** 補卡時每天排幾張，避免一次全部到期 */
 export const BACKFILL_PER_DAY = 6;
 
-/** 例句卡上線之前就讀完文法的課：照課程順序補上例句卡，分幾天排進複習 */
-export function backfillSentenceCards() {
-  const s0 = getState();
-  const missing = [...SENTENCES].filter(([k, e]) => !s0.srs[k] && s0.units[e.unit.id]?.grammar);
-  if (!missing.length) return;
+/** 照課程順序補上缺的卡，分幾天排進複習 */
+function backfill(keys: string[]) {
+  if (!keys.length) return;
   update((s) => {
-    missing.forEach(([k], i) => {
+    keys.forEach((k, i) => {
       s.srs[k] ??= { ...newCard(), due: addDays(today(), Math.floor(i / BACKFILL_PER_DAY)) };
     });
   });
+}
+
+/** 讀完文法之後才有的例句：例句卡上線之前就讀完的課、之後才補充的文法 */
+export function backfillSentenceCards() {
+  const s = getState();
+  backfill([...SENTENCES].filter(([k, e]) => !s.srs[k] && s.units[e.unit.id]?.grammar).map(([k]) => k));
+}
+
+/** 單字步驟完成之後才補充的單字 */
+export function backfillWordCards() {
+  const s = getState();
+  backfill([...WORDS].filter(([k, e]) => !s.srs[k] && s.units[e.unit.id]?.vocab).map(([k]) => k));
 }
 
 /** 把學過的課的數字卡排進複習（打開網站、讀完文法時）。回傳這次加入幾張 */
@@ -109,6 +119,13 @@ export function resurfaceWord(key: string) {
   update((s) => {
     const c = s.srs[key];
     if (c && c.due > today()) s.srs[key] = { ...c, due: today(), t: Date.now() };
+  });
+}
+
+/** 內容更新按下「看過了」 */
+export function markUpdateSeen(id: number) {
+  update((s) => {
+    s.seen[id] ??= Date.now();
   });
 }
 

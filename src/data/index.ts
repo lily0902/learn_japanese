@@ -6,6 +6,7 @@ import { numberCards } from './numberCards';
 import { prep } from './prep';
 
 export { TOPICS } from './topics';
+export { UPDATES } from './updates';
 
 /** 第 1–30 課 */
 export const LESSONS: Unit[] = [...n5Part1, ...n5Part2, ...n4].sort((a, b) => a.id - b.id);

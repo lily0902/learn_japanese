@@ -6,10 +6,13 @@
  * - 綜合測驗：每份都抽得出完整題數、單字題的選項與答案合理
  * - 數字讀音與數字練習：音變規則、隨機出的題目答案都對得上
  * - 數字卡：念法、對照、解鎖的課都對得上，每天加入的張數有上限
+ * - 內容更新：紀錄指到的課和項目都存在；內容數量變了要記一筆，記完跑 npm run check:data -- --accept
  */
-import { EXAMS, getUnit, LESSONS, NUMBER_CARDS, numberKey, PREP, TOPICS, unitLabel, UNITS, WORDS } from '../src/data';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { EXAMS, getUnit, LESSONS, NUMBER_CARDS, numberKey, PREP, TOPICS, unitLabel, UNITS, UPDATES, wordKey, WORDS } from '../src/data';
 import { numberCards } from '../src/data/numberCards';
-import type { Unit } from '../src/data/types';
+import type { ContentUpdate, Unit } from '../src/data/types';
+import { today } from '../src/lib/date';
 import { matchAnswer, matchDigits, normalize, romaToKana } from '../src/lib/kana';
 import {
   AGE, FLOOR, HOUR_SPAN, MINUTE, MONTH_SPAN, PEOPLE, PLATFORM, readCounted, readDate, readNumber, readTime, readTsu, ROOM,
@@ -19,8 +22,11 @@ import { KANJI_CLASS, kana, plain, rubyRe } from '../src/lib/ruby';
 import { newCard } from '../src/lib/srs';
 import { drawExam, examTotal, grammarPool, GRAMMAR_PER_UNIT, VOCAB_PER_UNIT } from '../src/quiz/exam';
 import { DRILL_DIRS, DRILL_KINDS, DRILL_SIZE, drawDrill } from '../src/quiz/numberDrill';
+import { BACKFILL_PER_DAY, backfillWordCards } from '../src/state/actions';
 import { emptyState, mergeStates, normalizeState } from '../src/state/merge';
-import { dueNumberKeys, numberCardPlan, numberContrasts, NUMBER_PER_DAY } from '../src/state/selectors';
+import { dueNumberKeys, needsReminder, numberCardPlan, numberContrasts, NUMBER_PER_DAY } from '../src/state/selectors';
+import { getState, setState } from '../src/state/store';
+import { STEPS } from '../src/state/types';
 
 const errors: string[] = [];
 const warnings: string[] = [];
@@ -400,6 +406,87 @@ if (!numberCards[0].show.endsWith('日') || !numberCards[15].show.endsWith('歳'
   if (m.days['2026-10-02'].rev !== 1 || m.days['2026-10-02'].exam !== 2) err('合併', '每日紀錄的複習與測驗都要保留');
   if (JSON.stringify(mergeStates(m, b).exams) !== JSON.stringify(m.exams)) err('合併', '測驗重複合併結果應該一致');
   if (!normalizeState({ units: {} }).exams) err('合併', '舊資料沒有 exams 也要能讀');
+}
+{
+  const a = emptyState();
+  const b = emptyState();
+  a.seen['1'] = 500;
+  b.seen['1'] = 300;
+  b.seen['2'] = 700;
+  const m = mergeStates(a, b);
+  if (m.seen['1'] !== 300 || m.seen['2'] !== 700) err('合併', '看過的更新兩邊都要保留，時間取最早');
+  if (JSON.stringify(mergeStates(m, a).seen) !== JSON.stringify(m.seen)) err('合併', '看過的更新重複合併結果應該一致');
+  if (!normalizeState({ units: {} }).seen) err('合併', '舊資料沒有 seen 也要能讀');
+}
+
+// ---- 內容更新 ----
+const updateIds = new Set<number>();
+for (const u of UPDATES) {
+  const where = `內容更新 ${u.id}`;
+  if (updateIds.has(u.id)) err(where, 'id 重複');
+  updateIds.add(u.id);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(u.date)) err(where, `日期格式不對：${u.date}`);
+  checkText(where, u.text);
+  const unit = getUnit(u.unit);
+  if (!unit) { err(where, `找不到第 ${u.unit} 課`); continue; }
+  const items = u.step === 'vocab' ? unit.vocab.map((w) => w[0]) : u.step === 'grammar' ? unit.grammar.map((g) => g.t) : [];
+  for (const a of u.at ?? []) if (!items.includes(a)) err(where, `${unitLabel(unit)}的 ${u.step} 找不到「${a}」`);
+}
+{
+  const u: ContentUpdate = { id: 1, date: '2026-11-07', unit: 3, step: 'grammar', text: '' };
+  const grammarOn = (day: number) => {
+    const s = emptyState();
+    s.units[3] = { grammar: new Date(2026, 10, day, 12).getTime() };
+    return s;
+  };
+  if (needsReminder(emptyState(), u)) err('內容更新', '還沒完成的步驟不該提醒');
+  if (!needsReminder(grammarOn(6), u)) err('內容更新', '更新之前完成的步驟要提醒');
+  if (!needsReminder(grammarOn(7), u)) err('內容更新', '更新當天完成的步驟也要提醒');
+  if (needsReminder(grammarOn(8), u)) err('內容更新', '更新之後才完成的步驟不該提醒');
+  const seen = grammarOn(6);
+  seen.seen[1] = 1;
+  if (needsReminder(seen, u)) err('內容更新', '看過的不該再提醒');
+  const practice = emptyState();
+  practice.units[3] = { practice: { best: 5, total: 8, t: new Date(2026, 10, 6).getTime() } };
+  if (!needsReminder(practice, { ...u, step: 'practice' })) err('內容更新', '練習的完成時間在 practice.t');
+}
+{
+  const unit = LESSONS[0];
+  const first = wordKey(unit.id, unit.vocab[0]);
+  const s = emptyState();
+  s.units[unit.id] = { vocab: 1 };
+  s.srs[first] = { ...newCard(), i: 7, t: 9 };
+  setState(s);
+  backfillWordCards();
+  const after = getState().srs;
+  if (after[first].i !== 7) err('補單字卡', '已經有的卡不能重設');
+  if (!unit.vocab.every((w) => after[wordKey(unit.id, w)])) err('補單字卡', '單字步驟完成後才補充的單字要補上');
+  if (Object.keys(after).some((k) => !k.startsWith(`${unit.id}|`))) err('補單字卡', '單字步驟還沒完成的課不該補');
+  if (unit.vocab.slice(1).filter((w) => after[wordKey(unit.id, w)].due === today()).length > BACKFILL_PER_DAY) {
+    err('補單字卡', `每天最多補 ${BACKFILL_PER_DAY} 張`);
+  }
+}
+
+/** 各步驟的內容數量存在 content-counts.json：數量變了就是補了內容，要記進 UPDATES */
+const COUNTS_FILE = new URL('./content-counts.json', import.meta.url);
+const counts = Object.fromEntries(UNITS.map((u) => [u.id, {
+  vocab: u.vocab.length,
+  grammar: u.grammar.reduce((n, g) => n + 1 + g.d.length + g.ex.length + (g.n ? 1 : 0) + (g.c ? 1 : 0), 0),
+  dialogue: u.dialogue.lines.length,
+  practice: u.practice.length,
+}]));
+if (process.argv.includes('--accept')) {
+  const rows = Object.entries(counts).map(([id, c]) => `  "${id}": ${JSON.stringify(c)}`);
+  writeFileSync(COUNTS_FILE, `{\n${rows.join(',\n')}\n}\n`);
+  console.log('已更新 content-counts.json\n');
+} else {
+  const saved: typeof counts = JSON.parse(readFileSync(COUNTS_FILE, 'utf8'));
+  for (const u of UNITS) {
+    for (const { key, label } of STEPS) {
+      const [was, now] = [saved[u.id]?.[key], counts[u.id][key]];
+      if (was !== now) err(`${unitLabel(u)} ${label}`, `內容數量 ${was} → ${now}。在 src/data/updates.ts 加一筆，再跑 npm run check:data -- --accept`);
+    }
+  }
 }
 
 // ---- 報告 ----

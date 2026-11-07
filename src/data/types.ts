@@ -1,3 +1,5 @@
+import type { StepKey } from '../state/types';
+
 /**
  * 課程資料格式
  * - 日文用「漢字[讀音]」標振假名，例如：食[た]べます
@@ -103,4 +105,19 @@ export interface Topic {
   /** 依 words 的第三欄分區顯示，第三欄就不再標在每張卡上 */
   grouped?: boolean;
   words: Vocab[];
+}
+
+/** 內容更新：補充已上線的課程內容時加一筆，學完的人才會被提醒回去看 */
+export interface ContentUpdate {
+  /** 「看過了」靠它對應：不能重複，寫好就不再改 */
+  id: number;
+  /** 補充的日期 YYYY-MM-DD：這天或更早完成這個步驟的才提醒 */
+  date: string;
+  /** 課號 */
+  unit: number;
+  step: StepKey;
+  /** 補了什麼，顯示在首頁和課頁 */
+  text: string;
+  /** 被補充的項目（文法點的 t、單字的日文）：連結會捲到第一個，看過之前保持標亮。會話和練習不用填 */
+  at?: string[];
 }

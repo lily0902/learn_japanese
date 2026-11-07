@@ -55,11 +55,12 @@ function MiniCheck({ c }: { c: NonNullable<GrammarPoint['c']> }) {
   );
 }
 
-function GrammarCard({ g, i }: { g: GrammarPoint; i: number }) {
+function GrammarCard({ g, i, fresh }: { g: GrammarPoint; i: number; fresh: boolean }) {
   return (
-    <article className="gpoint">
+    <article className={cx('gpoint', fresh && 'fresh')}>
       <header className="g-head">
         <span className="g-label">文法 {i + 1}</span>
+        {fresh && <span className="new-tag">更新</span>}
         <Jp as="h3" text={g.t} />
         <p className="g-mean">{g.m}</p>
       </header>
@@ -97,7 +98,7 @@ function GrammarCard({ g, i }: { g: GrammarPoint; i: number }) {
   );
 }
 
-export function GrammarStep({ unit, done, complete, next }: StepProps) {
+export function GrammarStep({ unit, done, complete, next, fresh }: StepProps) {
   const { settings } = useAppState();
   const finish = () => {
     if (!done) {
@@ -117,7 +118,7 @@ export function GrammarStep({ unit, done, complete, next }: StepProps) {
       </div>
       <p className="hint">先看「接續」公式，再讀說明和例句，最後用「小試身手」確認有沒有懂。</p>
       <div className={settings.hideZh ? 'zh-cover' : ''}>
-        {unit.grammar.map((g, i) => <GrammarCard key={g.t} g={g} i={i} />)}
+        {unit.grammar.map((g, i) => <GrammarCard key={g.t} g={g} i={i} fresh={fresh.includes(g.t)} />)}
       </div>
       <div className="step-foot">
         <button type="button" className="btn primary" onClick={finish}>

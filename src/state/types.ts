@@ -55,5 +55,7 @@ export interface AppState {
   wrong: Record<string, WrongEntry>;
   exams: Record<string, ExamProgress>;
   days: Record<string, DayLog>;
+  /** 內容更新的「看過了」：更新 id → 按下的時間 */
+  seen: Record<string, number>;
   settings: Settings;
 }

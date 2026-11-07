@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
 import { Hanko } from '../components/Misc';
 import { toast } from '../components/Toast';
 import { getUnit, unitLabel, UNITS } from '../data';
-import { completeStep } from '../state/actions';
-import { unitProgress } from '../state/selectors';
+import { completeStep, markUpdateSeen } from '../state/actions';
+import { unitProgress, unseenUpdates } from '../state/selectors';
 import { useAppState } from '../state/store';
 import { STEPS, type StepKey } from '../state/types';
 import { DialogueStep } from '../unit/DialogueStep';
@@ -21,6 +21,8 @@ export interface StepProps {
   complete: (score?: { best: number; total: number }) => boolean;
   /** 前往下一個步驟 */
   next: () => void;
+  /** 內容更新補的項目（文法點的 t、單字的日文），看過之前保持標亮 */
+  fresh: string[];
 }
 
 /*
@@ -33,6 +35,7 @@ const REMEMBER: StepKey[] = ['vocab', 'grammar'];
 export default function UnitPage() {
   const { id, step } = useParams();
   const navigate = useNavigate();
+  const { state: nav } = useLocation();
   const s = useAppState();
   const unit = getUnit(Number(id));
   const anchor = useRef<HTMLDivElement>(null);
@@ -43,14 +46,16 @@ export default function UnitPage() {
     (STEPS.find((x) => x.key === step)?.key) ?? (STEPS.find((x) => !p[x.key])?.key ?? 'vocab');
   const memoKey = `${unit?.id}-${current}`;
 
-  // 換課、換步驟時決定捲到哪：回到看過的單字／文法就捲回上次的位置；
-  // 同一課換到其他步驟捲到步驟列；剛進來或換了一課從頂端開始
+  // 換課、換步驟時決定捲到哪：從「內容更新」的連結進來就捲到被補充的項目；
+  // 回到看過的單字／文法就捲回上次的位置；同一課換到其他步驟捲到步驟列；剛進來或換了一課從頂端開始
   useLayoutEffect(() => {
     if (!unit) return;
     const saved = scrollMemo.get(memoKey);
     const sameUnit = lastUnit.current === unit.id;
     lastUnit.current = unit.id;
-    if (saved !== undefined) window.scrollTo(0, saved);
+    const target = nav?.toFresh ? document.querySelector('.fresh') : null;
+    if (target) target.scrollIntoView();
+    else if (saved !== undefined) window.scrollTo(0, saved);
     else if (!sameUnit) window.scrollTo(0, 0);
     else {
       const el = anchor.current;
@@ -72,6 +77,7 @@ export default function UnitPage() {
   const idx = UNITS.indexOf(unit);
   const prev = UNITS[idx - 1];
   const nextU = UNITS[idx + 1];
+  const updates = unseenUpdates(s).filter((u) => u.unit === unit.id && u.step === current);
 
   const complete = (key: StepKey) => (score?: { best: number; total: number }) => {
     const justDone = completeStep(unit, key, score);
@@ -83,7 +89,13 @@ export default function UnitPage() {
     const target = STEPS[i + 1];
     navigate(target ? `/unit/${unit.id}/${target.key}` : '/');
   };
-  const props = (key: StepKey): StepProps => ({ unit, done: !!p[key], complete: complete(key), next: goNext(key) });
+  const props = (key: StepKey): StepProps => ({
+    unit,
+    done: !!p[key],
+    complete: complete(key),
+    next: goNext(key),
+    fresh: updates.flatMap((u) => u.at ?? []),
+  });
 
   return (
     <>
@@ -127,6 +139,18 @@ export default function UnitPage() {
         {current === 'dialogue' && <DialogueStep {...props('dialogue')} />}
         {current === 'practice' && <PracticeStep {...props('practice')} nextUnit={nextU} />}
       </section>
+
+      {updates.length > 0 && (
+        <aside className="update-bar" aria-label="這個步驟的內容更新">
+          {updates.map((u) => (
+            <div className="update-row" key={u.id}>
+              <Icon name="sparkle" className="ic-sm" />
+              <p>這裡有更新：<Jp text={u.text} ja={false} /></p>
+              <button type="button" className="btn small" onClick={() => markUpdateSeen(u.id)}>看過了</button>
+            </div>
+          ))}
+        </aside>
+      )}
 
       <nav className="unit-pager" aria-label="上一課與下一課">
         {prev ? <Link className="btn ghost" to={`/unit/${prev.id}`}><Icon name="arrowLeft" />{unitLabel(prev)}</Link> : <span />}

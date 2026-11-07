@@ -1,6 +1,6 @@
-import { EXAMS, NUMBER_CARDS, numberKey, QUESTIONS, SENTENCES, UNITS, WORDS } from '../data';
-import type { Exam, NumberCard, Unit } from '../data/types';
-import { addDays, today } from '../lib/date';
+import { EXAMS, NUMBER_CARDS, numberKey, QUESTIONS, SENTENCES, UNITS, UPDATES, WORDS } from '../data';
+import type { ContentUpdate, Exam, NumberCard, Unit } from '../data/types';
+import { addDays, dayStr, today } from '../lib/date';
 import { STEPS, type AppState } from './types';
 
 export const unitProgress = (s: AppState, id: number) => s.units[id] ?? {};
@@ -69,6 +69,18 @@ export function numberContrasts(s: AppState, card: NumberCard): { reading: strin
     return other && grammarRead(s, other.unitId) ? [{ reading: other.readings[0], zh: other.zh }] : [];
   });
 }
+
+/**
+ * 這筆更新要不要提醒：步驟在更新當天或更早就完成了，而且還沒按「看過了」。
+ * 之後才完成的已經讀過新內容；紀錄只有日期，分不出同一天的先後，所以當天完成的也提醒
+ */
+export function needsReminder(s: AppState, u: ContentUpdate): boolean {
+  const p = s.units[u.unit]?.[u.step];
+  const t = typeof p === 'object' ? p.t : p;
+  return t !== undefined && !s.seen[u.id] && dayStr(new Date(t)) <= u.date;
+}
+
+export const unseenUpdates = (s: AppState) => UPDATES.filter((u) => needsReminder(s, u));
 
 export const wrongIds = (s: AppState) =>
   Object.keys(s.wrong).filter((k) => !s.wrong[k].cleared && QUESTIONS.has(k));

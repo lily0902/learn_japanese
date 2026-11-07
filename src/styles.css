@@ -350,7 +350,7 @@ main:focus, main:focus-visible { outline: none; }
 .dots { display: flex; gap: 4px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
 .dot.on { background: var(--ok); }
-.toc-next { font-size: 12px; font-weight: 700; color: var(--shu); background: var(--shu-soft); padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.toc-next, .new-tag { font-size: 12px; font-weight: 700; color: var(--shu); background: var(--shu-soft); padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
 @media (max-width: 520px) {
   .toc-item { grid-template-columns: 48px 1fr; }
   .toc-status { grid-column: 2; }
@@ -988,3 +988,20 @@ button.fc:focus-visible { outline-offset: 4px; }
 .topic-section .vocab-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-top: 10px; }
 .v-unit { color: var(--ai); font-weight: 700; text-decoration: none; }
 .v-unit:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* 內容更新：被補充的項目用螢光筆色標亮，看過才消失 */
+.task-actions { display: flex; gap: 8px; }
+@media (max-width: 520px) { .task-actions { grid-column: 1 / -1; } }
+.fresh { scroll-margin-top: 150px; }
+.vcard.fresh:not(.active), .gpoint.fresh { border-color: var(--warn); box-shadow: 0 0 0 3px var(--marker); }
+.g-head .new-tag { margin-left: 8px; }
+/* 捲到哪裡都按得到「看過了」，捲到底就回到原位，不會蓋住頁尾的按鈕 */
+.update-bar {
+  position: sticky; bottom: 16px; z-index: 20; margin-top: 24px;
+  display: grid; gap: 8px; padding: 8px 12px;
+  background: var(--warn-soft); border: 1px solid var(--warn); border-radius: var(--r); box-shadow: var(--shadow-2);
+}
+.update-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.update-row p { flex: 1; min-width: 0; }
+.update-row .ic { color: var(--warn); flex: none; }
+@media (max-width: 767px) { .update-bar { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px); } }

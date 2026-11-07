@@ -2,15 +2,17 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
-import { examRange, LESSONS, PREP, unitLabel, UNITS } from '../data';
-import { addDays, formatLong, today, weekday } from '../lib/date';
+import { examRange, getUnit, LESSONS, PREP, unitLabel, UNITS } from '../data';
+import type { ContentUpdate } from '../data/types';
+import { addDays, formatLong, formatMonthDay, today, weekday } from '../lib/date';
 import { examMinutes, examTotal } from '../quiz/exam';
-import { skipExam } from '../state/actions';
+import { markUpdateSeen, skipExam } from '../state/actions';
 import {
   activeDays, dueKeys, dueNumberKeys, dueSentenceKeys, isUnitDone, learnedCount, nextUnit, numberCount, pendingExam,
-  sentenceCount, stepsDone, streak, unitsDoneOn, wrongIds,
+  sentenceCount, stepsDone, streak, unitsDoneOn, unseenUpdates, wrongIds,
 } from '../state/selectors';
 import { useAppState } from '../state/store';
+import { STEPS } from '../state/types';
 
 function greeting() {
   const h = new Date().getHours();
@@ -39,6 +41,24 @@ function Task({ n, done, optional, title, sub, action }: {
       </div>
       {action}
     </li>
+  );
+}
+
+function UpdateTask({ u }: { u: ContentUpdate }) {
+  const step = STEPS.find((x) => x.key === u.step)!;
+  return (
+    <Task
+      n="新"
+      optional
+      title={<>{unitLabel(getUnit(u.unit)!)}・{step.label}：<Jp text={u.text} ja={false} /></>}
+      sub={`${formatMonthDay(u.date)}補充`}
+      action={
+        <div className="task-actions">
+          <Link className="btn small" to={`/unit/${u.unit}/${u.step}`} state={{ toFresh: true }}>去看看</Link>
+          <button type="button" className="btn small ghost" onClick={() => markUpdateSeen(u.id)}>看過了</button>
+        </div>
+      }
+    />
   );
 }
 
@@ -73,6 +93,7 @@ export default function Home() {
   const nDue = dueNumberKeys(s).length;
   const nLearned = numberCount(s);
   const wrongN = wrongIds(s).length;
+  const updates = unseenUpdates(s);
   const doneToday = unitsDoneOn(s, today());
   const doneCount = UNITS.filter((u) => isUnitDone(s, u.id)).length;
   const reviewedToday = !!s.days[today()]?.rev;
@@ -222,6 +243,16 @@ export default function Home() {
           )}
         </ol>
       </section>
+
+      {updates.length > 0 && (
+        <section className="card">
+          <h2>內容更新</h2>
+          <p className="card-sub" style={{ marginBottom: 12 }}>這些是你學完之後才補上的內容，回去看一下就不會漏掉。</p>
+          <ul className="tasks">
+            {updates.map((u) => <UpdateTask key={u.id} u={u} />)}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>學習印章</h2>

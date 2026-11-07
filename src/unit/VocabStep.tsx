@@ -33,10 +33,16 @@ export function usePlayAll(words: Vocab[]) {
   return { playing, toggle };
 }
 
-/** 單字卡片（遮住中文時點一下顯示）；extra 會接在詞性後面 */
-export function VocabCard({ w, active = false, extra }: { w: Vocab; active?: boolean; extra?: ReactNode }) {
+/** 單字卡片（遮住中文時點一下顯示）；extra 會接在詞性後面，fresh 標出內容更新補的單字 */
+export function VocabCard({ w, active = false, fresh = false, extra }: {
+  w: Vocab;
+  active?: boolean;
+  fresh?: boolean;
+  extra?: ReactNode;
+}) {
   const [show, setShow] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
+  const note = fresh ? <span className="new-tag">更新</span> : extra;
 
   // 全部播放時，畫面跟著念到的字走
   useEffect(() => {
@@ -46,16 +52,16 @@ export function VocabCard({ w, active = false, extra }: { w: Vocab; active?: boo
   }, [active]);
 
   return (
-    <li ref={ref} className={`vcard ${show ? 'show' : ''} ${active ? 'active' : ''}`} onClick={() => setShow((v) => !v)}>
+    <li ref={ref} className={`vcard ${show ? 'show' : ''} ${active ? 'active' : ''} ${fresh ? 'fresh' : ''}`} onClick={() => setShow((v) => !v)}>
       <Jp className="v-jp" text={w[0]} as="div" />
       <div className="v-zh">{w[1]}</div>
-      {(w[2] || extra) && <div className="v-pos">{w[2]}{w[2] && extra && '・'}{extra}</div>}
+      {(w[2] || note) && <div className="v-pos">{w[2]}{w[2] && note && '・'}{note}</div>}
       <SpeakButton text={w[0]} useKana />
     </li>
   );
 }
 
-export function VocabStep({ unit, done, complete, next }: StepProps) {
+export function VocabStep({ unit, done, complete, next, fresh }: StepProps) {
   const { settings } = useAppState();
   const { playing, toggle } = usePlayAll(unit.vocab);
 
@@ -78,7 +84,7 @@ export function VocabStep({ unit, done, complete, next }: StepProps) {
         點 <Icon name="volume" className="ic-sm" /> 聽發音。開啟「遮住中文」可以自我測驗，點卡片就會顯示答案。
       </p>
       <ul className={`vocab-grid ${settings.hideZh ? 'zh-cover' : ''}`}>
-        {unit.vocab.map((w, i) => <VocabCard key={w[0]} w={w} active={playing === i} />)}
+        {unit.vocab.map((w, i) => <VocabCard key={w[0]} w={w} active={playing === i} fresh={fresh.includes(w[0])} />)}
       </ul>
       <div className="step-foot">
         <button type="button" className="btn" onClick={toggle}>
