@@ -381,7 +381,7 @@ main:focus, main:focus-visible { outline: none; }
 .crumbs a:hover { color: var(--ink); text-decoration: underline; }
 .unit-head {
   position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
-  padding: 22px 20px; box-shadow: var(--shadow-1); border-top: 6px solid var(--shu);
+  padding: 22px 20px; box-shadow: var(--shadow-1);
 }
 .unit-no { font-size: 13px; font-weight: 700; color: var(--shu); letter-spacing: .08em; }
 .unit-head h1 { font-family: var(--font-ja); font-weight: 600; font-size: clamp(28px, 6vw, 38px); margin: 6px 0 2px; line-height: 1.6; }
@@ -463,7 +463,7 @@ main:focus, main:focus-visible { outline: none; }
 .ex-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .ex {
   display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;
-  padding: 10px 12px; border-left: 3px solid var(--line-strong); background: var(--paper); border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 10px 12px; background: var(--paper); border-radius: var(--r-sm);
 }
 .ex-jp { font-size: 18px; line-height: 2; }
 .ex-zh { font-size: 14px; color: var(--ink-2); }
@@ -860,7 +860,6 @@ button.fc:focus-visible { outline-offset: 4px; }
 .toc-exam .hanko.sm { font-size: 13px; }
 .exam-best { font-size: 13px; font-weight: 700; color: var(--ai); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-.exam-head { border-top-color: var(--ai); }
 .exam-head .goal .ic { color: var(--ai); }
 .exam-head .hanko { font-size: 16px; }
 
