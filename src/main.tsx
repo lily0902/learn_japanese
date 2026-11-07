@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
-import { backfillSentenceCards } from './state/actions';
+import { backfillSentenceCards, scheduleNumberCards } from './state/actions';
 import { initSync } from './state/sync';
 import './styles.css';
 
@@ -19,6 +19,7 @@ if (authError) sessionStorage.setItem('auth-error', authError);
 
 initSync();
 backfillSentenceCards();
+scheduleNumberCards();
 registerSW({ immediate: true });
 
 createRoot(document.getElementById('root')!).render(

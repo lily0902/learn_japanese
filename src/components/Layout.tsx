@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { setSpeechRate, stopSpeaking } from '../lib/speech';
 import { setSetting } from '../state/actions';
-import { dueKeys, dueSentenceKeys } from '../state/selectors';
+import { dueKeys, dueNumberKeys, dueSentenceKeys } from '../state/selectors';
 import { useAppState } from '../state/store';
 import { useSyncInfo, type SyncStatus } from '../state/sync';
 import { Icon, type IconName } from './Icon';
@@ -29,7 +29,7 @@ export function Layout() {
   const sync = useSyncInfo();
   const { pathname } = useLocation();
   const mainRef = useRef<HTMLElement>(null);
-  const due = dueKeys(state).length + dueSentenceKeys(state).length;
+  const due = dueKeys(state).length + dueSentenceKeys(state).length + dueNumberKeys(state).length;
   const { furi, theme, rate } = state.settings;
 
   useEffect(() => { document.body.classList.toggle('no-furi', !furi); }, [furi]);

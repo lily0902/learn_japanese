@@ -1,5 +1,5 @@
-import { EXAMS, QUESTIONS, SENTENCES, UNITS, WORDS } from '../data';
-import type { Exam, Unit } from '../data/types';
+import { EXAMS, NUMBER_CARDS, numberKey, QUESTIONS, SENTENCES, UNITS, WORDS } from '../data';
+import type { Exam, NumberCard, Unit } from '../data/types';
 import { addDays, today } from '../lib/date';
 import { STEPS, type AppState } from './types';
 
@@ -24,6 +24,51 @@ export function dueSentenceKeys(s: AppState): string[] {
 }
 
 export const sentenceCount = (s: AppState) => Object.keys(s.srs).filter((k) => SENTENCES.has(k)).length;
+
+export function dueNumberKeys(s: AppState): string[] {
+  const t = today();
+  return Object.keys(s.srs).filter((k) => NUMBER_CARDS.has(k) && s.srs[k].due <= t);
+}
+
+export const numberCount = (s: AppState) => Object.keys(s.srs).filter((k) => NUMBER_CARDS.has(k)).length;
+
+const grammarRead = (s: AppState, unitId: number) => !!s.units[unitId]?.grammar;
+
+/** 每天最多排幾張新的數字卡，避免一次全部到期 */
+export const NUMBER_PER_DAY = 6;
+
+/**
+ * 還沒加入的數字卡要排在哪一天：讀完那課文法的才算，照牌組順序排。
+ * 已經排好、還沒複習過的新卡也佔每天的名額
+ */
+export function numberCardPlan(s: AppState): [key: string, due: string][] {
+  const t = today();
+  const load = new Map<string, number>();
+  for (const k of NUMBER_CARDS.keys()) {
+    const c = s.srs[k];
+    if (!c || c.t) continue;
+    const day = c.due < t ? t : c.due;
+    load.set(day, (load.get(day) ?? 0) + 1);
+  }
+  const plan: [string, string][] = [];
+  let day = t;
+  for (const [k, c] of NUMBER_CARDS) {
+    if (s.srs[k] || !grammarRead(s, c.unitId)) continue;
+    while ((load.get(day) ?? 0) >= NUMBER_PER_DAY) day = addDays(day, 1);
+    load.set(day, (load.get(day) ?? 0) + 1);
+    plan.push([k, day]);
+  }
+  return plan;
+}
+
+/** 數字卡卡背的對照：教過的才列出來，還沒學到的念法不會提早出現 */
+export function numberContrasts(s: AppState, card: NumberCard): { reading: string; zh: string }[] {
+  return (card.vs ?? []).flatMap((v) => {
+    if (typeof v !== 'string') return grammarRead(s, v[2]) ? [{ reading: v[0], zh: v[1] }] : [];
+    const other = NUMBER_CARDS.get(numberKey(v));
+    return other && grammarRead(s, other.unitId) ? [{ reading: other.readings[0], zh: other.zh }] : [];
+  });
+}
 
 export const wrongIds = (s: AppState) =>
   Object.keys(s.wrong).filter((k) => !s.wrong[k].cleared && QUESTIONS.has(k));

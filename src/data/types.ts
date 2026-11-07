@@ -72,6 +72,25 @@ export interface Exam {
   units: Unit[];
 }
 
+/** 數字卡卡背的對照：另一張數字卡的 show，或不在牌組裡的念法 [念法, 中文, 教它的課號] */
+export type Contrast = string | [reading: string, zh: string, unitId: number];
+
+/** 數字卡：特殊念法的數字，看數字說念法 */
+export interface NumberCard {
+  /** 卡片正面：8歳、3,000 */
+  show: string;
+  /** 正面的小字提示，也是別張卡對照時顯示的意思：8 歲、三千 */
+  zh: string;
+  /** 可接受的念法，第一個最常用（朗讀用它） */
+  readings: string[];
+  /** 教這個念法的課號：讀完那課的文法才加入 */
+  unitId: number;
+  /** 容易搞混的念法，教過才顯示 */
+  vs?: Contrast[];
+  /** 補充說明 */
+  note?: string;
+}
+
 /** 主題單字表：查詢用的參考資料，不是課程（不進單字卡、不出題） */
 export interface Topic {
   /** 網址用的代號：#/index/topics/color */

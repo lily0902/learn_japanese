@@ -4,12 +4,14 @@ import { Icon } from '../components/Icon';
 import { Jp } from '../components/Jp';
 import { Hanko, useKey } from '../components/Misc';
 import { SpeakButton } from '../components/SpeakButton';
-import { QUESTIONS, SENTENCES, unitLabel, WORDS } from '../data';
+import { getUnit, NUMBER_CARDS, QUESTIONS, SENTENCES, unitLabel, WORDS } from '../data';
 import { shuffle } from '../lib/random';
 import { speak } from '../lib/speech';
 import { intervalLabel, nextInterval, newCard, type Card, type Grade } from '../lib/srs';
 import { gradeWord, markReviewDone } from '../state/actions';
-import { dueKeys, dueSentenceKeys, learnedCount, sentenceCount, wrongIds } from '../state/selectors';
+import {
+  dueKeys, dueNumberKeys, dueSentenceKeys, learnedCount, numberContrasts, numberCount, sentenceCount, wrongIds,
+} from '../state/selectors';
 import { getState, useAppState } from '../state/store';
 import { Quiz } from '../quiz/Quiz';
 import NumberDrill from './NumberDrill';
@@ -29,13 +31,13 @@ function Crumbs() {
   );
 }
 
-type Deck = 'word' | 'sentence';
+type Deck = 'word' | 'sentence' | 'number';
 
 /** 記得幾次以上的單字改成看中文想日文：先認得，再說得出來（忘記了就退回看日文） */
 export const REVERSE_AFTER = 2;
 
-/** 一張卡的正面與背面；produce = 看中文說日文 */
-interface Face { produce: boolean; front: ReactNode; back: ReactNode; say: string; useKana: boolean }
+/** 一張卡的正面與背面；produce = 先開口說再翻面，mode 是這種卡的提示標籤 */
+interface Face { produce: boolean; mode?: string; front: ReactNode; back: ReactNode; say: string; useKana: boolean }
 
 function faceOf(key: string, card: Card): Face | null {
   const word = WORDS.get(key);
@@ -46,6 +48,42 @@ function faceOf(key: string, card: Card): Face | null {
     return card.r >= REVERSE_AFTER
       ? { produce: true, say: w[0], useKana: true, front: <><span className="fc-zh big">{w[1]}</span>{meta}</>, back: jp }
       : { produce: false, say: w[0], useKana: true, front: jp, back: <><span className="fc-zh">{w[1]}</span>{meta}</> };
+  }
+  const num = NUMBER_CARDS.get(key);
+  if (num) {
+    const [reading, ...others] = num.readings;
+    const contrasts = numberContrasts(getState(), num);
+    return {
+      produce: true,
+      mode: '看數字說念法',
+      say: reading,
+      useKana: true,
+      front: (
+        <>
+          <span className="fc-num" lang="ja">{num.show}</span>
+          <span className="fc-hint">{num.zh}</span>
+        </>
+      ),
+      back: (
+        <>
+          <span className="fc-reading" lang="ja">{reading}</span>
+          {others.length > 0 && <span className="fc-meta">也念 <span lang="ja">{others.join('、')}</span></span>}
+          {contrasts.length > 0 && (
+            <span className="fc-vs">
+              <span className="fc-vs-title">別搞混</span>
+              {contrasts.map((c) => (
+                <span className="fc-vs-row" key={c.reading + c.zh}>
+                  <span lang="ja">{c.reading}</span>
+                  <span>{c.zh}</span>
+                </span>
+              ))}
+            </span>
+          )}
+          {num.note && <span className="fc-note">{num.note}</span>}
+          <span className="fc-meta">{unitLabel(getUnit(num.unitId)!)}</span>
+        </>
+      ),
+    };
   }
   const sen = SENTENCES.get(key);
   if (!sen) return null;
@@ -74,13 +112,21 @@ const DECK_COPY = {
     empty: '目前沒有到期的例句卡，明天再來看看！',
     finished: '今天的例句卡說完了，開口又更順了。',
   },
+  number: {
+    none: '還沒有數字卡。讀完預備課 2 的「文法」步驟後，特殊念法就會陸續加入這裡。',
+    empty: '目前沒有到期的數字卡，明天再來看看！',
+    finished: '今天的數字卡說完了，那些特殊念法又更熟了。',
+  },
 };
 
-/** 單字卡、例句卡：free=true 是單字的隨機練習（不影響複習排程） */
+const DECK_COUNT = { word: learnedCount, sentence: sentenceCount, number: numberCount };
+
+/** 單字卡、例句卡、數字卡：free=true 是單字的隨機練習（不影響複習排程） */
 function Flashcards({ deck, free = false }: { deck: Deck; free?: boolean }) {
   const [queue, setQueue] = useState<string[]>(() => {
     const s = getState();
     if (deck === 'sentence') return shuffle(dueSentenceKeys(s));
+    if (deck === 'number') return shuffle(dueNumberKeys(s));
     return free ? shuffle(Object.keys(s.srs).filter((k) => WORDS.has(k))).slice(0, 20) : shuffle(dueKeys(s));
   });
   const [total] = useState(queue.length);
@@ -123,7 +169,7 @@ function Flashcards({ deck, free = false }: { deck: Deck; free?: boolean }) {
 
   if (total === 0) {
     const s = getState();
-    const hasAny = (deck === 'sentence' ? sentenceCount(s) : learnedCount(s)) > 0;
+    const hasAny = DECK_COUNT[deck](s) > 0;
     return (
       <>
         <Crumbs />
@@ -165,7 +211,7 @@ function Flashcards({ deck, free = false }: { deck: Deck; free?: boolean }) {
           </div>
         </div>
         <button type="button" className={`fc ${flipped ? 'flipped' : ''}`} onClick={flip} aria-label={flipped ? '卡片背面' : '翻面看答案'}>
-          {face.produce && <span className="fc-mode"><Icon name="mic" className="ic-sm" />看中文說日文</span>}
+          {face.produce && <span className="fc-mode"><Icon name="mic" className="ic-sm" />{face.mode ?? '看中文說日文'}</span>}
           {face.front}
           {flipped ? (
             <span className={face.produce ? 'fc-back answer' : 'fc-back'}>{face.back}</span>
@@ -225,6 +271,8 @@ function Overview() {
   const learned = learnedCount(s);
   const sDue = dueSentenceKeys(s).length;
   const sLearned = sentenceCount(s);
+  const nDue = dueNumberKeys(s).length;
+  const nLearned = numberCount(s);
   const wrongN = wrongIds(s).length;
   return (
     <>
@@ -248,6 +296,15 @@ function Overview() {
           {!sLearned && <p className="card-sub">讀完任何一課的「文法」步驟後，每個文法點會挑一句例句加入這裡。</p>}
           <div className="btn-row">
             {sDue > 0 && <Link className="btn primary" to="/review/sentences">開始說說看</Link>}
+          </div>
+        </section>
+        <section className="card">
+          <h2><Icon name="target" />數字卡</h2>
+          <p className="big-num">{nDue}<small>張到期</small></p>
+          <p className="card-sub">已加入 {nLearned} 張。日期、年齡、量詞的特殊念法，看到數字就說出來，翻面再對照容易搞混的念法。</p>
+          {!nLearned && <p className="card-sub">讀完預備課 2 的「文法」步驟後，特殊念法會每天幾張慢慢加入這裡。</p>}
+          <div className="btn-row">
+            {nDue > 0 && <Link className="btn primary" to="/review/number-cards">開始說說看</Link>}
           </div>
         </section>
         <section className="card">
@@ -278,6 +335,7 @@ export default function Review() {
   if (mode === 'cards') return <Flashcards key="cards" deck="word" />;
   if (mode === 'free') return <Flashcards key="free" deck="word" free />;
   if (mode === 'sentences') return <Flashcards key="sentences" deck="sentence" />;
+  if (mode === 'number-cards') return <Flashcards key="number-cards" deck="number" />;
   if (mode === 'wrong') return <WrongBook />;
   if (mode === 'numbers') return <NumberDrill />;
   return <Overview />;

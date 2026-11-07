@@ -4,6 +4,7 @@ import { addDays, dayStr, today } from '../lib/date';
 import { gradeCard, newCard, type Card, type Grade } from '../lib/srs';
 import { passMark } from '../quiz/exam';
 import { emptyState, normalizeState } from './merge';
+import { numberCardPlan } from './selectors';
 import { getState, setState, update } from './store';
 import { STEPS, type AppState, type Settings, type StepKey } from './types';
 
@@ -69,7 +70,17 @@ export function backfillSentenceCards() {
   });
 }
 
-/** 單字卡、例句卡共用：按下評分後排下一次複習 */
+/** 把學過的課的數字卡排進複習（打開網站、讀完文法時）。回傳這次加入幾張 */
+export function scheduleNumberCards(): number {
+  const plan = numberCardPlan(getState());
+  if (!plan.length) return 0;
+  update((s) => {
+    for (const [k, due] of plan) s.srs[k] ??= { ...newCard(), due };
+  });
+  return plan.length;
+}
+
+/** 單字卡、例句卡、數字卡共用：按下評分後排下一次複習 */
 export function gradeWord(key: string, g: Grade): Card {
   let next = getState().srs[key];
   update((s) => {

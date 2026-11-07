@@ -1,7 +1,8 @@
-import type { Exam, GrammarPoint, QuestionWithId, Unit, Vocab } from './types';
+import type { Exam, GrammarPoint, NumberCard, QuestionWithId, Unit, Vocab } from './types';
 import { n5Part1 } from './n5-part1';
 import { n5Part2 } from './n5-part2';
 import { n4 } from './n4';
+import { numberCards } from './numberCards';
 import { prep } from './prep';
 
 export { TOPICS } from './topics';
@@ -35,6 +36,13 @@ export const sentenceKey = (unitId: number, jp: string) => `s:${unitId}|${jp}`;
  * 「買います → 買って」這種動詞變化表不是句子，整個文法點都是變化表的就跳過
  */
 export const SENTENCES = new Map<string, { jp: string; zh: string; g: GrammarPoint; unit: Unit }>();
+
+/** 數字卡的 key：「n:正面」 */
+export const numberKey = (show: string) => `n:${show}`;
+
+/** 數字卡：Map 的順序就是加入複習的順序 */
+export const NUMBER_CARDS = new Map<string, NumberCard>(numberCards.map((c) => [numberKey(c.show), c]));
+
 /** 練習題是「課號-第幾題」，文法的小試身手是「課號-g第幾個文法」 */
 export const QUESTIONS = new Map<string, QuestionWithId>();
 

@@ -7,7 +7,7 @@ import { toast } from '../components/Toast';
 import type { GrammarPoint } from '../data/types';
 import { shuffle } from '../lib/random';
 import type { StepProps } from '../pages/UnitPage';
-import { addSentenceCards } from '../state/actions';
+import { addSentenceCards, scheduleNumberCards } from '../state/actions';
 import { useAppState } from '../state/store';
 
 /** 每個文法點最後的「小試身手」：選錯可以再選，直到選對 */
@@ -103,7 +103,9 @@ export function GrammarStep({ unit, done, complete, next }: StepProps) {
     if (!done) {
       const added = addSentenceCards(unit);
       complete();
-      if (added) toast(`已加入 ${added} 張例句卡，之後會在「複習」出現`);
+      const numbers = scheduleNumberCards();
+      const parts = [added && `${added} 張例句卡`, numbers && `${numbers} 張數字卡`].filter(Boolean);
+      if (parts.length) toast(`已加入 ${parts.join('、')}，之後會在「複習」出現`);
     }
     next();
   };

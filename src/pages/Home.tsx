@@ -7,8 +7,8 @@ import { addDays, formatLong, today, weekday } from '../lib/date';
 import { examMinutes, examTotal } from '../quiz/exam';
 import { skipExam } from '../state/actions';
 import {
-  activeDays, dueKeys, dueSentenceKeys, isUnitDone, learnedCount, nextUnit, pendingExam, sentenceCount, stepsDone, streak,
-  unitsDoneOn, wrongIds,
+  activeDays, dueKeys, dueNumberKeys, dueSentenceKeys, isUnitDone, learnedCount, nextUnit, numberCount, pendingExam,
+  sentenceCount, stepsDone, streak, unitsDoneOn, wrongIds,
 } from '../state/selectors';
 import { useAppState } from '../state/store';
 
@@ -70,6 +70,8 @@ export default function Home() {
   const learned = learnedCount(s);
   const sDue = dueSentenceKeys(s).length;
   const sLearned = sentenceCount(s);
+  const nDue = dueNumberKeys(s).length;
+  const nLearned = numberCount(s);
   const wrongN = wrongIds(s).length;
   const doneToday = unitsDoneOn(s, today());
   const doneCount = UNITS.filter((u) => isUnitDone(s, u.id)).length;
@@ -164,6 +166,22 @@ export default function Home() {
     task3 = <Task n={3} done title="例句卡複習完成" sub="今天沒有要說的例句了。" />;
   }
 
+  // 數字卡：讀完預備課 2 的文法後才出現
+  const taskN = task3 ? 4 : 3;
+  let task4: ReactNode = null;
+  if (nLearned > 0 && nDue > 0) {
+    task4 = (
+      <Task
+        n={taskN}
+        title={`說出 ${nDue} 張到期的數字卡`}
+        sub={`看數字說念法・大約 ${Math.max(1, Math.ceil((nDue * 8) / 60))} 分鐘`}
+        action={<Link className="btn primary" to="/review/number-cards">開始說說看<Icon name="arrowRight" /></Link>}
+      />
+    );
+  } else if (nLearned > 0) {
+    task4 = <Task n={taskN} done title="數字卡複習完成" sub="今天沒有到期的數字卡。" />;
+  }
+
   return (
     <div className="stack">
       <section className="hero">
@@ -192,6 +210,7 @@ export default function Home() {
           {task1}
           {task2}
           {task3}
+          {task4}
           {wrongN > 0 && (
             <Task
               n="＋"

@@ -5,18 +5,22 @@
  * - 羅馬拼音轉換、答案比對、同步合併
  * - 綜合測驗：每份都抽得出完整題數、單字題的選項與答案合理
  * - 數字讀音與數字練習：音變規則、隨機出的題目答案都對得上
+ * - 數字卡：念法、對照、解鎖的課都對得上，每天加入的張數有上限
  */
-import { EXAMS, LESSONS, PREP, TOPICS, unitLabel, UNITS, WORDS } from '../src/data';
+import { EXAMS, getUnit, LESSONS, NUMBER_CARDS, numberKey, PREP, TOPICS, unitLabel, UNITS, WORDS } from '../src/data';
+import { numberCards } from '../src/data/numberCards';
 import type { Unit } from '../src/data/types';
 import { matchAnswer, matchDigits, normalize, romaToKana } from '../src/lib/kana';
 import {
-  AGE, FLOOR, MINUTE, PLATFORM, readCounted, readDate, readNumber, readTime, ROOM, YEN,
+  AGE, FLOOR, HOUR_SPAN, MINUTE, MONTH_SPAN, PEOPLE, PLATFORM, readCounted, readDate, readNumber, readTime, readTsu, ROOM,
+  STICK, TIMES, WEEK_SPAN, YEAR, YEN,
 } from '../src/lib/numbers';
 import { KANJI_CLASS, kana, plain, rubyRe } from '../src/lib/ruby';
 import { newCard } from '../src/lib/srs';
 import { drawExam, examTotal, grammarPool, GRAMMAR_PER_UNIT, VOCAB_PER_UNIT } from '../src/quiz/exam';
 import { DRILL_DIRS, DRILL_KINDS, DRILL_SIZE, drawDrill } from '../src/quiz/numberDrill';
 import { emptyState, mergeStates, normalizeState } from '../src/state/merge';
+import { dueNumberKeys, numberCardPlan, numberContrasts, NUMBER_PER_DAY } from '../src/state/selectors';
 
 const errors: string[] = [];
 const warnings: string[] = [];
@@ -225,6 +229,20 @@ const readingCases: [string, string[], string][] = [
   ['4/1', readDate(4, 1), 'しがつついたち'], ['10/17', readDate(10, 17), 'じゅうがつじゅうしちにち'],
   ['5/20', readDate(5, 20), 'ごがつはつか'], ['7/24', readDate(7, 24), 'しちがつにじゅうよっか'],
   ['9/19', readDate(9, 19), 'くがつじゅうくにち'], ['12/31', readDate(12, 31), 'じゅうにがつさんじゅういちにち'],
+  ['1人', readCounted(1, PEOPLE), 'ひとり'], ['2人', readCounted(2, PEOPLE), 'ふたり'], ['4人', readCounted(4, PEOPLE), 'よにん'],
+  ['5人', readCounted(5, PEOPLE), 'ごにん'], ['11人', readCounted(11, PEOPLE), 'じゅういちにん'], ['14人', readCounted(14, PEOPLE), 'じゅうよにん'],
+  ['1本', readCounted(1, STICK), 'いっぽん'], ['2本', readCounted(2, STICK), 'にほん'], ['3本', readCounted(3, STICK), 'さんぼん'],
+  ['6本', readCounted(6, STICK), 'ろっぽん'], ['8本', readCounted(8, STICK), 'はっぽん'], ['10本', readCounted(10, STICK), 'じゅっぽん'],
+  ['1回', readCounted(1, TIMES), 'いっかい'], ['3回', readCounted(3, TIMES), 'さんかい'], ['6回', readCounted(6, TIMES), 'ろっかい'],
+  ['8回', readCounted(8, TIMES), 'はっかい'], ['10回', readCounted(10, TIMES), 'じゅっかい'],
+  ['1時間', readCounted(1, HOUR_SPAN), 'いちじかん'], ['4時間', readCounted(4, HOUR_SPAN), 'よじかん'],
+  ['7時間', readCounted(7, HOUR_SPAN), 'しちじかん'], ['9時間', readCounted(9, HOUR_SPAN), 'くじかん'],
+  ['1週間', readCounted(1, WEEK_SPAN), 'いっしゅうかん'], ['8週間', readCounted(8, WEEK_SPAN), 'はっしゅうかん'],
+  ['10週間', readCounted(10, WEEK_SPAN), 'じゅっしゅうかん'],
+  ['1か月', readCounted(1, MONTH_SPAN), 'いっかげつ'], ['3か月', readCounted(3, MONTH_SPAN), 'さんかげつ'],
+  ['6か月', readCounted(6, MONTH_SPAN), 'ろっかげつ'], ['8か月', readCounted(8, MONTH_SPAN), 'はっかげつ'],
+  ['10か月', readCounted(10, MONTH_SPAN), 'じゅっかげつ'], ['4年', readCounted(4, YEAR), 'よねん'],
+  ['1つ', readTsu(1), 'ひとつ'], ['8つ', readTsu(8), 'やっつ'], ['10', readTsu(10), 'とお'],
 ];
 for (const [label, got, want] of readingCases) {
   if (got[0] !== want) err('數字讀音', `${label} → ${got.join('／')}（應為 ${want}）`);
@@ -266,6 +284,69 @@ for (const { key: kind } of DRILL_KINDS) {
       }
     }
   }
+}
+
+// ---- 數字卡 ----
+if (numberCards.length !== 76) err('數字卡', `應該有 76 張，現在是 ${numberCards.length} 張`);
+if (NUMBER_CARDS.size !== numberCards.length) err('數字卡', '有重複的正面');
+for (const c of numberCards) {
+  const at = `數字卡 ${c.show}`;
+  if (!c.zh) err(at, '缺中文提示');
+  if (!getUnit(c.unitId)) err(at, `找不到課號 ${c.unitId}`);
+  if (!c.readings.length || c.readings.some((r) => !KANA_ONLY.test(r))) err(at, `念法要是假名：${c.readings.join('／')}`);
+  if (new Set(c.readings).size !== c.readings.length) err(at, '念法重複');
+  if (c.note) checkText(at, c.note);
+  for (const v of c.vs ?? []) {
+    if (v === c.show) err(at, '不能跟自己對照');
+    if (typeof v === 'string') {
+      if (!NUMBER_CARDS.has(numberKey(v))) err(at, `對照找不到卡片：${v}`);
+    } else {
+      if (!KANA_ONLY.test(v[0])) err(at, `對照的念法要是假名：${v[0]}`);
+      if (!v[1]) err(at, `對照缺中文：${v[0]}`);
+      if (!getUnit(v[2])) err(at, `對照找不到課號 ${v[2]}`);
+    }
+  }
+}
+if (!numberCards[0].show.endsWith('日') || !numberCards[15].show.endsWith('歳')) err('數字卡', '順序應該是日期 → 年齡 → 其他');
+{
+  const s = emptyState();
+  if (numberCardPlan(s).length) err('數字卡', '沒學過任何一課就不該有卡');
+  s.units[104] = { grammar: 1 };
+  const prep4 = numberCardPlan(s);
+  if (prep4.length !== 9) err('數字卡', `預備課 4 應該解鎖 9 張，現在是 ${prep4.length} 張`);
+  s.units[102] = { grammar: 1 };
+  s.units[103] = { grammar: 1 };
+  s.units[3] = { grammar: 1 };
+  s.units[4] = { grammar: 1 };
+  s.units[12] = { grammar: 1 };
+  const plan = numberCardPlan(s);
+  if (plan.length !== numberCards.length) err('數字卡', `全部學完應該排 ${numberCards.length} 張，現在是 ${plan.length} 張`);
+  const perDay = new Map<string, number>();
+  for (const [, due] of plan) perDay.set(due, (perDay.get(due) ?? 0) + 1);
+  if ([...perDay.values()].some((n) => n > NUMBER_PER_DAY)) err('數字卡', `每天不能超過 ${NUMBER_PER_DAY} 張`);
+  if (perDay.size !== Math.ceil(numberCards.length / NUMBER_PER_DAY)) err('數字卡', `應該排 ${Math.ceil(numberCards.length / NUMBER_PER_DAY)} 天，現在是 ${perDay.size} 天`);
+  if (plan[0][0] !== numberKey('1日')) err('數字卡', '第一張應該是 1 號');
+
+  // 已排好但還沒複習的新卡要佔名額；複習過的不佔
+  const later = emptyState();
+  later.units[103] = { grammar: 1 };
+  for (const [k, due] of numberCardPlan(later).slice(0, 4)) later.srs[k] = { ...newCard(), due };
+  later.units[104] = { grammar: 1 };
+  const rest = numberCardPlan(later);
+  const firstDay = rest.filter(([, due]) => due === rest[0][1]).length;
+  if (firstDay !== NUMBER_PER_DAY - 4) err('數字卡', `已排 4 張時，今天只能再排 ${NUMBER_PER_DAY - 4} 張，現在是 ${firstDay} 張`);
+  if (dueNumberKeys(later).length !== 4) err('數字卡', '到期的數字卡數量不對');
+  later.srs[numberKey('1日')].t = Date.now();
+  const freed = numberCardPlan(later).filter(([, due]) => due === rest[0][1]).length;
+  if (freed !== NUMBER_PER_DAY - 3) err('數字卡', '複習過的卡不應該佔新卡名額');
+
+  // 教過才顯示對照
+  const early = emptyState();
+  early.units[103] = { grammar: 1 };
+  const card20 = NUMBER_CARDS.get(numberKey('20日'))!;
+  if (numberContrasts(early, card20).map((c) => c.reading).join() !== 'ふつか') err('數字卡', '還沒教的念法不該出現在對照');
+  early.units[104] = { grammar: 1 };
+  if (numberContrasts(early, card20).map((c) => c.reading).join() !== 'ふつか,はたち') err('數字卡', '教過的念法要出現在對照');
 }
 
 // ---- 同步合併 ----
@@ -318,6 +399,7 @@ const stats = {
   例句: UNITS.reduce((n, u) => n + u.grammar.reduce((k, g) => k + g.ex.length, 0), 0),
   練習題: UNITS.reduce((n, u) => n + u.practice.length, 0),
   綜合測驗: EXAMS.length,
+  數字卡: numberCards.length,
   會話台詞: UNITS.reduce((n, u) => n + u.dialogue.lines.length, 0),
 };
 console.log('內容統計', stats);

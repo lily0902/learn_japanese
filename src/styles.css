@@ -688,6 +688,19 @@ main:focus, main:focus-visible { outline: none; }
 }
 .fc-sentence { font-size: clamp(22px, 5vw, 28px); line-height: 2.1; overflow-wrap: anywhere; }
 .fc-back.answer { align-self: stretch; padding-top: 14px; border-top: 1px dashed var(--line-strong); }
+/* 數字卡：正面的數字最大，卡背的念法次之，對照表收在下面 */
+.fc-num { font-family: var(--font-ja); font-size: clamp(44px, 12vw, 64px); font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.fc-hint { font-size: 15px; color: var(--ink-2); }
+.fc-reading { font-family: var(--font-ja); font-size: clamp(28px, 7vw, 36px); font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.fc-vs {
+  display: grid; grid-template-columns: max-content max-content; gap: 2px 20px; justify-content: center;
+  margin: 10px 0 2px; font-size: 15px; line-height: 1.7; text-align: left;
+}
+.fc-vs-title { grid-column: 1 / -1; font-size: 13px; font-weight: 700; color: var(--ink-2); text-align: center; }
+.fc-vs-row { display: contents; }
+.fc-vs-row > [lang="ja"] { font-family: var(--font-ja); font-weight: 600; }
+.fc-vs-row > :last-child { color: var(--ink-2); }
+.fc-note { margin-top: 6px; font-size: 14px; color: var(--ink-2); text-wrap: balance; }
 .grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; }
 .grade {
   min-height: 64px; border-radius: 14px; border: 1.5px solid var(--line-strong); background: var(--surface);
