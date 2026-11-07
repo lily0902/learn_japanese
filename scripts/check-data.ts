@@ -149,13 +149,26 @@ for (const t of TOPICS) {
   if (!t.desc) err(at, '缺使用提示');
   checkText(at, t.desc);
   if (t.words.length < 10) warnings.push(`${at} 只有 ${t.words.length} 個字`);
+  // 同音不同義的字可以並存（いっかい＝1 樓、1 次），日文和中文都一樣才算重複
+  const inTopic = t.words.map((w) => `${w[0]}-${w[1]}`);
+  if (new Set(inTopic).size !== inTopic.length) err(at, '有日文和中文都重複的字');
   t.words.forEach((w, i) => {
     checkText(`${at} 第${i + 1}個`, w[0]);
     if (!w[1]) err(`${at} 第${i + 1}個`, '缺中文');
+    if (t.grouped) {
+      if (!w[2]) err(`${at} 第${i + 1}個`, '分區的主題要有區名');
+      return;
+    }
     if (topicSeen.has(w[0])) warnings.push(`主題單字重複：${w[0]}（${topicSeen.get(w[0])}、${t.name}）`);
     else topicSeen.set(w[0], t.name);
   });
+  if (t.grouped) {
+    const runs = t.words.map((w) => w[2]).filter((name, i, all) => name !== all[i - 1]);
+    if (new Set(runs).size !== runs.length) err(at, `同一區被拆開了：${runs.join('／')}`);
+  }
 }
+const numberTopic = TOPICS.find((t) => t.id === 'numbers');
+if (numberTopic?.words.length !== numberCards.length) err('主題', '「數字的特殊念法」應該收錄全部的數字卡');
 
 // ---- 綜合測驗 ----
 if (EXAMS.length !== 6) err('綜合測驗', `應該有 6 份，現在是 ${EXAMS.length} 份`);

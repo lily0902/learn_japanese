@@ -1,10 +1,19 @@
+import { numberCards } from './numberCards';
 import type { Topic } from './types';
 
 /*
  * 主題單字表：旅遊和日常會用到、但不一定在課程裡出現的單字，給「需要的時候查」用。
  * 不是課程：不進單字卡、不出題。跟課程單字重複的字，索引頁會標出是第幾課教的。
+ * 「數字的特殊念法」例外：直接取自數字卡，是給平常多看多聽的總表。
  */
 export const TOPICS: Topic[] = [
+  {
+    id: 'numbers',
+    name: '數字的特殊念法',
+    desc: '日期、年齡、樓層、量詞這些要硬記的念法，都整理在這裡。按「全部播放」可以從頭聽到尾，想測自己記住了沒，就到「複習」的數字卡。',
+    grouped: true,
+    words: numberCards.map((c) => [c.readings[0], c.zh, c.kind]),
+  },
   {
     id: 'color',
     name: '顏色',

@@ -5,11 +5,11 @@ import { Jp } from '../components/Jp';
 import { CoverToggle } from '../components/Misc';
 import { SpeakButton } from '../components/SpeakButton';
 import { getUnit, taughtIn, TOPICS, unitLabel, UNITS } from '../data';
-import type { Topic, Unit } from '../data/types';
+import type { Topic, Unit, Vocab } from '../data/types';
 import { normalize } from '../lib/kana';
 import { kana, plain } from '../lib/ruby';
 import { useAppState } from '../state/store';
-import { VocabCard } from '../unit/VocabStep';
+import { usePlayAll, VocabCard } from '../unit/VocabStep';
 
 /** 一筆索引：出自哪一課（unitId）或哪個主題單字表（topic） */
 interface Entry { unitId?: number; topic?: Topic; jp: string; zh: string; pos?: string; keys: string[] }
@@ -58,12 +58,37 @@ function UnitLink({ u }: { u: Unit }) {
   );
 }
 
+/** 把相鄰、第三欄相同的字排成一區 */
+function sectionsOf(words: Vocab[]) {
+  const sections: { name: string; words: Vocab[] }[] = [];
+  for (const w of words) {
+    const last = sections[sections.length - 1];
+    if (last?.name === w[2]) last.words.push(w);
+    else sections.push({ name: w[2] ?? '', words: [w] });
+  }
+  return sections;
+}
+
 /** 一個主題的單字表 */
 function TopicPage({ topic }: { topic: Topic }) {
   const { settings } = useAppState();
+  const { playing, toggle } = usePlayAll(topic.words);
   const i = TOPICS.indexOf(topic);
   const prev = TOPICS[i - 1];
   const next = TOPICS[i + 1];
+  const gridClass = `vocab-grid ${settings.hideZh ? 'zh-cover' : ''}`;
+  const card = (w: Vocab) => {
+    const u = taughtIn(w[0]);
+    // いっかい 同時是 1 樓和 1 次，key 要連中文一起算
+    return (
+      <VocabCard
+        key={`${w[0]}-${w[1]}`}
+        w={topic.grouped ? [w[0], w[1]] : w}
+        active={w === topic.words[playing]}
+        extra={u && <UnitLink u={u} />}
+      />
+    );
+  };
   return (
     <>
       <nav className="crumbs" aria-label="路徑">
@@ -71,18 +96,26 @@ function TopicPage({ topic }: { topic: Topic }) {
       </nav>
       <h1 className="page-title">{topic.name}</h1>
       <Jp as="p" ja={false} className="page-sub" text={topic.desc} />
-      <div className="sec-head">
-        <p className="hint">
-          <span>{topic.words.length} 個字・點 <Icon name="volume" className="ic-sm" /> 聽發音。標著「第 N 課」的字，課程裡有教。</span>
-        </p>
+      <p className="hint">
+        {topic.words.length} 個字・點 <Icon name="volume" className="ic-sm" /> 聽發音。{!topic.grouped && '標著「第 N 課」的字，課程裡有教。'}
+      </p>
+      <div className="topic-tools">
+        <button type="button" className="btn small" onClick={toggle}>
+          <Icon name={playing >= 0 ? 'stop' : 'play'} />
+          {playing >= 0 ? '停止播放' : '全部播放'}
+        </button>
         <CoverToggle />
       </div>
-      <ul className={`vocab-grid ${settings.hideZh ? 'zh-cover' : ''}`}>
-        {topic.words.map((w) => {
-          const u = taughtIn(w[0]);
-          return <VocabCard key={w[0]} w={w} extra={u && <UnitLink u={u} />} />;
-        })}
-      </ul>
+      {topic.grouped ? (
+        sectionsOf(topic.words).map((s) => (
+          <section className="topic-section" key={s.name}>
+            <h2>{s.name}</h2>
+            <ul className={gridClass}>{s.words.map(card)}</ul>
+          </section>
+        ))
+      ) : (
+        <ul className={gridClass}>{topic.words.map(card)}</ul>
+      )}
       <nav className="unit-pager" aria-label="上一個與下一個主題">
         {prev ? <Link className="btn ghost" to={`/index/topics/${prev.id}`}><Icon name="arrowLeft" />{prev.name}</Link> : <span />}
         {next && <Link className="btn ghost" to={`/index/topics/${next.id}`}>{next.name}<Icon name="arrowRight" /></Link>}
@@ -120,7 +153,8 @@ export default function IndexPage() {
   }, [current, q]);
 
   const topic = current === 'topics' ? TOPICS.find((t) => t.id === topicId) : undefined;
-  if (topic) return <TopicPage topic={topic} />;
+  // key：換主題時要重新掛載，正在播放的清單才會停下來
+  if (topic) return <TopicPage key={topic.id} topic={topic} />;
   const browsingTopics = current === 'topics' && !q;
 
   return (
@@ -150,7 +184,7 @@ export default function IndexPage() {
       </div>
       <p className="hint" aria-live="polite">
         {browsingTopics
-          ? `旅遊和日常的主題單字，共 ${TOPIC_WORDS.length} 個字。需要的時候查，不會加進單字卡。`
+          ? `主題單字共 ${TOPIC_WORDS.length} 個字。需要的時候查，不會加進單字卡。`
           : `找到 ${list.length} 筆`}
       </p>
       {browsingTopics ? (
@@ -160,7 +194,7 @@ export default function IndexPage() {
       ) : (
         <ul className="idx-list">
           {list.map((e) => (
-            <li key={`${e.unitId ?? e.topic!.id}-${e.jp}`}>
+            <li key={`${e.unitId ?? e.topic!.id}-${e.jp}-${e.zh}`}>
               <div className="idx-main">
                 <Jp as="p" className="idx-jp" text={e.jp} />
                 <p className="idx-zh">{e.zh}{e.pos && <span className="muted">・{e.pos}</span>}</p>

@@ -20,14 +20,15 @@ const L12 = 12;
 type Row = [n: number, vs?: Contrast[], note?: string];
 
 const group = (
+  kind: string,
   unitId: number,
   show: (n: number) => string,
   zh: (n: number) => string,
   read: (n: number) => string[],
   rows: Row[],
-): NumberCard[] => rows.map(([n, vs, note]) => ({ show: show(n), zh: zh(n), readings: read(n), unitId, vs, note }));
+): NumberCard[] => rows.map(([n, vs, note]) => ({ show: show(n), zh: zh(n), kind, readings: read(n), unitId, vs, note }));
 
-const dates = group(P3, (n) => `${n}日`, (n) => `${n} 號`, readDay, [
+const dates = group('日期', P3, (n) => `${n}日`, (n) => `${n} 號`, readDay, [
   [1, [['いちにち', '1 天', P3]], '「ついたち」只能當日期。'],
   [2, ['20日', '2つ']],
   [3, ['3つ']],
@@ -45,7 +46,7 @@ const dates = group(P3, (n) => `${n}日`, (n) => `${n} 號`, readDay, [
   [24, [], '不念にじゅうよんにち，跟 4 號一樣是よっか。'],
 ]);
 
-const ages = group(P4, (n) => `${n}歳`, (n) => `${n} 歲`, (n) => readCounted(n, AGE), [
+const ages = group('年齡', P4, (n) => `${n}歳`, (n) => `${n} 歲`, (n) => readCounted(n, AGE), [
   [1, ['1階']],
   [8, ['8階']],
   [10, ['10階', '10日', '10']],
@@ -53,6 +54,7 @@ const ages = group(P4, (n) => `${n}歳`, (n) => `${n} 歲`, (n) => readCounted(n
 ]);
 
 const floors = group(
+  '樓層',
   P4,
   (n) => `${n}階`,
   (n) => `${n} 樓`,
@@ -67,19 +69,19 @@ const floors = group(
   ],
 );
 
-const months = group(P3, (n) => `${n}月`, (n) => `${n} 月`, readMonth, [
+const months = group('月份與年', P3, (n) => `${n}月`, (n) => `${n} 月`, readMonth, [
   [4, ['4日', '4時']],
   [7, ['7日', '7時']],
   [9, ['9日', '9時']],
 ]);
 
-const years = group(P3, (n) => `${n}年`, (n) => `${n} 年`, (n) => readCounted(n, YEAR), [
+const years = group('月份與年', P3, (n) => `${n}年`, (n) => `${n} 年`, (n) => readCounted(n, YEAR), [
   [4, ['4月'], '不念よんねん。'],
 ]);
 
 const BIG_ZH: Record<number, string> = { 300: '三百', 600: '六百', 800: '八百', 3000: '三千', 8000: '八千', 10000: '一萬' };
 
-const bigNumbers = group(P2, (n) => n.toLocaleString('en-US'), (n) => BIG_ZH[n], readNumber, [
+const bigNumbers = group('百千萬與日圓', P2, (n) => n.toLocaleString('en-US'), (n) => BIG_ZH[n], readNumber, [
   [300, ['3,000']],
   [600, [['ろくせん', '六千', P2]]],
   [800, ['8,000']],
@@ -88,17 +90,17 @@ const bigNumbers = group(P2, (n) => n.toLocaleString('en-US'), (n) => BIG_ZH[n],
   [10000, [['せん', '一千', P2], ['ひゃく', '一百', P2]], '一百、一千不加いち，一萬一定要加。'],
 ]);
 
-const yen = group(L3, (n) => `${n}円`, (n) => `${n} 日圓`, (n) => readCounted(n, YEN), [
+const yen = group('百千萬與日圓', L3, (n) => `${n}円`, (n) => `${n} 日圓`, (n) => readCounted(n, YEN), [
   [4, [], '結尾的 4 念よ，不念よんえん；14 円也是じゅうよえん。'],
 ]);
 
-const hours = group(L4, (n) => `${n}時`, (n) => `${n} 點`, (n) => readTime(n, 0), [
+const hours = group('幾點幾分', L4, (n) => `${n}時`, (n) => `${n} 點`, (n) => readTime(n, 0), [
   [4, ['4時間', '4月']],
   [7, ['7時間']],
   [9, ['9時間']],
 ]);
 
-const minutes = group(L4, (n) => `${n}分`, (n) => `${n} 分鐘`, (n) => readCounted(n, MINUTE), [
+const minutes = group('幾點幾分', L4, (n) => `${n}分`, (n) => `${n} 分鐘`, (n) => readCounted(n, MINUTE), [
   [1, ['1本']],
   [3, ['3本']],
   [4, ['4時']],
@@ -107,7 +109,7 @@ const minutes = group(L4, (n) => `${n}分`, (n) => `${n} 分鐘`, (n) => readCou
   [10, ['10本']],
 ]);
 
-const things = group(L12, (n) => (n === 10 ? '10' : `${n}つ`), (n) => `${n} 個`, readTsu, [
+const things = group('幾個（つ）', L12, (n) => (n === 10 ? '10' : `${n}つ`), (n) => `${n} 個`, readTsu, [
   [1, ['1人', '1日']],
   [2, ['2人', '2日']],
   [3, ['3日']],
@@ -120,13 +122,13 @@ const things = group(L12, (n) => (n === 10 ? '10' : `${n}つ`), (n) => `${n} 個
   [10, ['10日'], '10 個沒有「つ」。'],
 ]);
 
-const people = group(L12, (n) => `${n}人`, (n) => `${n} 個人`, (n) => readCounted(n, PEOPLE), [
+const people = group('幾個人', L12, (n) => `${n}人`, (n) => `${n} 個人`, (n) => readCounted(n, PEOPLE), [
   [1, ['1つ']],
   [2, ['2つ']],
   [4, ['4つ'], '不念よんにん，也不念しにん。'],
 ]);
 
-const sticks = group(L12, (n) => `${n}本`, (n) => `${n} 支`, (n) => readCounted(n, STICK), [
+const sticks = group('幾支（本）', L12, (n) => `${n}本`, (n) => `${n} 支`, (n) => readCounted(n, STICK), [
   [1, ['1分']],
   [3, ['3分']],
   [6, ['6分']],
@@ -136,26 +138,26 @@ const sticks = group(L12, (n) => `${n}本`, (n) => `${n} 支`, (n) => readCounte
 
 const SAME_AS_FLOOR = '跟樓層同音，要靠前後文分辨。';
 
-const times = group(L12, (n) => `${n}回`, (n) => `${n} 次`, (n) => readCounted(n, TIMES), [
+const times = group('幾次（回）', L12, (n) => `${n}回`, (n) => `${n} 次`, (n) => readCounted(n, TIMES), [
   [1, ['1階'], SAME_AS_FLOOR],
   [6, ['6階'], SAME_AS_FLOOR],
   [8, ['8階'], SAME_AS_FLOOR],
   [10, ['10階'], SAME_AS_FLOOR],
 ]);
 
-const hourSpans = group(L12, (n) => `${n}時間`, (n) => `${n} 小時`, (n) => readCounted(n, HOUR_SPAN), [
+const hourSpans = group('時間長度', L12, (n) => `${n}時間`, (n) => `${n} 小時`, (n) => readCounted(n, HOUR_SPAN), [
   [4, ['4時']],
   [7, ['7時']],
   [9, ['9時']],
 ]);
 
-const weekSpans = group(L12, (n) => `${n}週間`, (n) => `${n} 週`, (n) => readCounted(n, WEEK_SPAN), [
+const weekSpans = group('時間長度', L12, (n) => `${n}週間`, (n) => `${n} 週`, (n) => readCounted(n, WEEK_SPAN), [
   [1],
   [8],
   [10],
 ]);
 
-const monthSpans = group(L12, (n) => `${n}か月`, (n) => `${n} 個月`, (n) => readCounted(n, MONTH_SPAN), [
+const monthSpans = group('時間長度', L12, (n) => `${n}か月`, (n) => `${n} 個月`, (n) => readCounted(n, MONTH_SPAN), [
   [1, [['いちがつ', '1 月', P3]]],
   [6, [['ろくがつ', '6 月', P3]]],
   [8, [['はちがつ', '8 月', P3]]],

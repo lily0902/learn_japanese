@@ -973,5 +973,18 @@ button.fc:focus-visible { outline-offset: 4px; }
 .topic-name { font-family: var(--font-head); font-size: 19px; font-weight: 700; }
 .topic-sample { font-family: var(--font-ja); font-size: 16px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topic-count { font-size: 12px; color: var(--ink-3); }
+/* 主題頁：捲到哪裡都按得到停止播放 */
+.topic-tools {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px;
+  position: sticky; top: 65px; z-index: 20; padding: 8px 0;
+  background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(6px);
+}
+@media (max-width: 520px) { .topic-tools { top: 62px; } }
+.topic-tools + .vocab-grid { margin-top: 6px; }
+.topic-section { margin-top: 28px; }
+.topic-tools + .topic-section { margin-top: 12px; }
+.topic-section h2 { font-size: 18px; }
+/* 數字的念法很長（じゅっしゅうかん），欄寬要放得下一整行 */
+.topic-section .vocab-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-top: 10px; }
 .v-unit { color: var(--ai); font-weight: 700; text-decoration: none; }
 .v-unit:hover { text-decoration: underline; text-underline-offset: 3px; }

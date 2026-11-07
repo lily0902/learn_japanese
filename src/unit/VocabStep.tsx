@@ -10,11 +10,43 @@ import type { StepProps } from '../pages/UnitPage';
 import { addUnitCards } from '../state/actions';
 import { useAppState } from '../state/store';
 
+/** 依序朗讀一串單字：playing 是念到第幾個（-1 代表沒在播放），toggle 開始或停止 */
+export function usePlayAll(words: Vocab[]) {
+  const [playing, setPlaying] = useState(-1);
+  const run = useRef(0);
+
+  useEffect(() => () => { run.current++; stopSpeaking(); }, []);
+
+  const toggle = async () => {
+    const id = ++run.current;
+    if (playing >= 0) { stopSpeaking(); setPlaying(-1); return; }
+    if (!speechSupported) { toast('這個瀏覽器不支援語音朗讀'); return; }
+    for (let i = 0; i < words.length; i++) {
+      setPlaying(i);
+      await speak(words[i][0], true);
+      await wait(350);
+      if (run.current !== id) return;
+    }
+    setPlaying(-1);
+  };
+
+  return { playing, toggle };
+}
+
 /** 單字卡片（遮住中文時點一下顯示）；extra 會接在詞性後面 */
 export function VocabCard({ w, active = false, extra }: { w: Vocab; active?: boolean; extra?: ReactNode }) {
   const [show, setShow] = useState(false);
+  const ref = useRef<HTMLLIElement>(null);
+
+  // 全部播放時，畫面跟著念到的字走
+  useEffect(() => {
+    if (!active) return;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    ref.current?.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+  }, [active]);
+
   return (
-    <li className={`vcard ${show ? 'show' : ''} ${active ? 'active' : ''}`} onClick={() => setShow((v) => !v)}>
+    <li ref={ref} className={`vcard ${show ? 'show' : ''} ${active ? 'active' : ''}`} onClick={() => setShow((v) => !v)}>
       <Jp className="v-jp" text={w[0]} as="div" />
       <div className="v-zh">{w[1]}</div>
       {(w[2] || extra) && <div className="v-pos">{w[2]}{w[2] && extra && '・'}{extra}</div>}
@@ -25,23 +57,7 @@ export function VocabCard({ w, active = false, extra }: { w: Vocab; active?: boo
 
 export function VocabStep({ unit, done, complete, next }: StepProps) {
   const { settings } = useAppState();
-  const [playing, setPlaying] = useState(-1);
-  const stop = useRef(false);
-
-  useEffect(() => () => { stop.current = true; stopSpeaking(); }, []);
-
-  const playAll = async () => {
-    if (playing >= 0) { stop.current = true; stopSpeaking(); setPlaying(-1); return; }
-    if (!speechSupported) { toast('這個瀏覽器不支援語音朗讀'); return; }
-    stop.current = false;
-    for (let i = 0; i < unit.vocab.length; i++) {
-      if (stop.current) break;
-      setPlaying(i);
-      await speak(unit.vocab[i][0], true);
-      await wait(350);
-    }
-    setPlaying(-1);
-  };
+  const { playing, toggle } = usePlayAll(unit.vocab);
 
   const finish = () => {
     if (!done) {
@@ -65,7 +81,7 @@ export function VocabStep({ unit, done, complete, next }: StepProps) {
         {unit.vocab.map((w, i) => <VocabCard key={w[0]} w={w} active={playing === i} />)}
       </ul>
       <div className="step-foot">
-        <button type="button" className="btn" onClick={playAll}>
+        <button type="button" className="btn" onClick={toggle}>
           <Icon name={playing >= 0 ? 'stop' : 'play'} />
           {playing >= 0 ? '停止播放' : '全部播放'}
         </button>

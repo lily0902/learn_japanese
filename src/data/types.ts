@@ -81,6 +81,8 @@ export interface NumberCard {
   show: string;
   /** 正面的小字提示，也是別張卡對照時顯示的意思：8 歲、三千 */
   zh: string;
+  /** 類別，也是主題頁的分區：日期、年齡 */
+  kind: string;
   /** 可接受的念法，第一個最常用（朗讀用它） */
   readings: string[];
   /** 教這個念法的課號：讀完那課的文法才加入 */
@@ -98,5 +100,7 @@ export interface Topic {
   name: string;
   /** 一兩句使用提示 */
   desc: string;
+  /** 依 words 的第三欄分區顯示，第三欄就不再標在每張卡上 */
+  grouped?: boolean;
   words: Vocab[];
 }
