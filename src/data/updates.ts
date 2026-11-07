@@ -8,4 +8,6 @@ import type { ContentUpdate } from './types';
  */
 export const UPDATES: ContentUpdate[] = [
   { id: 1, date: '2026-11-07', unit: 3, step: 'grammar', text: '新增「〜をお願[ねが]いします」', at: ['〜をお願[ねが]いします'] },
+  { id: 2, date: '2026-11-07', unit: 103, step: 'vocab', text: '新增「〜様[さま]」', at: ['〜様[さま]'] },
+  { id: 3, date: '2026-11-07', unit: 1, step: 'grammar', text: '補充「先生[せんせい]」和中文「先生」的差別', at: ['Ａは Ｂじゃありません'] },
 ];
